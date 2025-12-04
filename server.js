@@ -34,7 +34,7 @@ const GUILD_ID = '1336782145833668729';
 const ROLE_SUBSCRIBER = '1339227370833448980';
 const ROLE_FRIEND = '1445655680735383675';
 
-// --- HELPER: RCON SENDER ---
+// --- HELPER: RCON SENDER WITH RETRY ---
 const sendRconCommand = async (command) => {
     // 1. Check if configured
     if (!Rcon || !RCON_HOST || !RCON_PASSWORD) {
@@ -45,18 +45,42 @@ const sendRconCommand = async (command) => {
     const rcon = new Rcon({
         host: RCON_HOST,
         port: RCON_PORT,
-        password: RCON_PASSWORD
+        password: RCON_PASSWORD,
+        timeout: 5000 // 5s connection timeout
     });
 
-    try {
-        await rcon.connect();
-        const response = await rcon.send(command);
-        console.log(`✅ [RCON SENT] ${command} | Response: ${response}`);
-        await rcon.end();
-        return true;
-    } catch (error) {
-        console.error(`❌ [RCON ERROR] Failed to send "${command}":`, error.message);
-        return false;
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await rcon.connect();
+            const response = await rcon.send(command);
+            console.log(`✅ [RCON SENT] ${command} | Response: ${response}`);
+            await rcon.end();
+            return true;
+        } catch (error) {
+            console.warn(`⚠️ [RCON ATTEMPT ${attempt}/${maxRetries}] Failed: ${error.message}`);
+            
+            // If last attempt, check specifically for ECONNREFUSED to give a hint
+            if (attempt === maxRetries) {
+                console.error(`❌ [RCON ERROR] Could not send "${command}" after 3 attempts.`);
+                
+                if (error.code === 'ECONNREFUSED') {
+                    console.error(`
+    🚨 CONNECTION REFUSED (${RCON_HOST}:${RCON_PORT})
+    Possible fixes:
+    1. Go to Bloom.host Panel -> Network. Is port ${RCON_PORT} actually allocated?
+    2. Check server.properties: Ensure 'enable-rcon=true' and 'rcon.port=${RCON_PORT}'.
+    3. RESTART the Minecraft server (Required after changing properties).
+                    `);
+                } else if (error.message.includes('Authentication failed')) {
+                    console.error("🚨 WRONG PASSWORD. Check RCON_PASSWORD in .env vs server.properties.");
+                }
+                return false;
+            }
+            
+            // Wait 1 second before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
     }
 };
 
