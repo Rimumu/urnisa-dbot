@@ -1,8 +1,13 @@
-
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const mongoose = require('mongoose');
+let Rcon;
+try {
+    Rcon = require('rcon-client').Rcon;
+} catch (e) {
+    console.warn("⚠️ 'rcon-client' not installed. RCON commands will be simulated in logs.");
+}
 require('dotenv').config();
 
 const app = express();
@@ -20,9 +25,40 @@ const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const MONGO_URI = process.env.MONGO_URI;
 
+// RCON Config
+const RCON_HOST = process.env.RCON_HOST;
+const RCON_PORT = parseInt(process.env.RCON_PORT || '25575');
+const RCON_PASSWORD = process.env.RCON_PASSWORD;
+
 const GUILD_ID = '1336782145833668729'; 
 const ROLE_SUBSCRIBER = '1339227370833448980';
 const ROLE_FRIEND = '1445655680735383675';
+
+// --- HELPER: RCON SENDER ---
+const sendRconCommand = async (command) => {
+    // 1. Check if configured
+    if (!Rcon || !RCON_HOST || !RCON_PASSWORD) {
+        console.log(`🔔 [RCON SIMULATION] ${command}`);
+        return false;
+    }
+
+    const rcon = new Rcon({
+        host: RCON_HOST,
+        port: RCON_PORT,
+        password: RCON_PASSWORD
+    });
+
+    try {
+        await rcon.connect();
+        const response = await rcon.send(command);
+        console.log(`✅ [RCON SENT] ${command} | Response: ${response}`);
+        await rcon.end();
+        return true;
+    } catch (error) {
+        console.error(`❌ [RCON ERROR] Failed to send "${command}":`, error.message);
+        return false;
+    }
+};
 
 // --- DATABASE ---
 if (MONGO_URI) {
@@ -244,10 +280,13 @@ app.post('/api/admin/whitelist/approve', auth, async (req, res) => {
         const app = await WhitelistApp.findById(id);
         if (!app) return res.status(404).json({ error: "App not found" });
 
-        console.log(`✅ [RCON SIMULATION] whitelist add ${app.minecraftUsername}`);
-        
+        // Update DB
         app.status = 'approved';
         await app.save();
+
+        // Send RCON Command
+        await sendRconCommand(`whitelist add ${app.minecraftUsername}`);
+
         res.json({ success: true });
     } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -267,7 +306,9 @@ app.post('/api/admin/whitelist/revoke', auth, async (req, res) => {
         const app = await WhitelistApp.findById(id);
         if (!app) return res.status(404).json({ error: "App not found" });
 
-        console.log(`🔌 [RCON SIMULATION] whitelist remove ${app.minecraftUsername}`);
+        // Send RCON Command
+        await sendRconCommand(`whitelist remove ${app.minecraftUsername}`);
+        await sendRconCommand(`kick ${app.minecraftUsername} You have been removed from the whitelist.`);
         
         await WhitelistApp.findByIdAndDelete(id);
         res.json({ success: true });
