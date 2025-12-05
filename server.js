@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -33,6 +34,7 @@ const RCON_PASSWORD = process.env.RCON_PASSWORD;
 const GUILD_ID = '1336782145833668729'; 
 const ROLE_SUBSCRIBER = '1339227370833448980';
 const ROLE_FRIEND = '1445655680735383675';
+const WHITELIST_NOTIFY_CHANNEL = '1375823728717467788';
 
 // --- HELPER: RCON SENDER WITH RETRY ---
 const sendRconCommand = async (command) => {
@@ -60,25 +62,11 @@ const sendRconCommand = async (command) => {
         } catch (error) {
             console.warn(`⚠️ [RCON ATTEMPT ${attempt}/${maxRetries}] Failed: ${error.message}`);
             
-            // If last attempt, check specifically for ECONNREFUSED to give a hint
             if (attempt === maxRetries) {
                 console.error(`❌ [RCON ERROR] Could not send "${command}" after 3 attempts.`);
-                
-                if (error.code === 'ECONNREFUSED') {
-                    console.error(`
-    🚨 CONNECTION REFUSED (${RCON_HOST}:${RCON_PORT})
-    Possible fixes:
-    1. Go to Bloom.host Panel -> Network. Is port ${RCON_PORT} actually allocated?
-    2. Check server.properties: Ensure 'enable-rcon=true' and 'rcon.port=${RCON_PORT}'.
-    3. RESTART the Minecraft server (Required after changing properties).
-                    `);
-                } else if (error.message.includes('Authentication failed')) {
-                    console.error("🚨 WRONG PASSWORD. Check RCON_PASSWORD in .env vs server.properties.");
-                }
                 return false;
             }
             
-            // Wait 1 second before retrying
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
@@ -310,6 +298,28 @@ app.post('/api/admin/whitelist/approve', auth, async (req, res) => {
 
         // Send RCON Command
         await sendRconCommand(`whitelist add ${app.minecraftUsername}`);
+
+        // --- Send Discord Notification ---
+        if (DISCORD_BOT_TOKEN) {
+            try {
+                await axios.post(
+                    `https://discord.com/api/v10/channels/${WHITELIST_NOTIFY_CHANNEL}/messages`,
+                    {
+                        content: `<@${app.discordId}> You have been whitelisted! 🎉`
+                    },
+                    {
+                        headers: { 
+                            Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+                            'Content-Type': 'application/json' 
+                        }
+                    }
+                );
+                console.log(`✅ [Discord] Notification sent to <@${app.discordId}>`);
+            } catch (err) {
+                console.error(`❌ [Discord] Failed to send notification: ${err.message}`);
+                // Proceed without erroring the whole request
+            }
+        }
 
         res.json({ success: true });
     } catch(e) { res.status(500).json({ error: e.message }); }
