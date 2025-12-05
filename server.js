@@ -41,7 +41,7 @@ const WHITELIST_NOTIFY_CHANNEL = '1375823728717467788';
 // Map Gacha Item Names to RCON Commands / Minecraft IDs
 const ITEM_MAP = {
     'Bronze Coin': 'numismatic-overhaul:bronze_coin',
-    'Silver Coin': 'numismatic-overhaulsilver_coin', 
+    'Silver Coin': 'numismatic-overhaul:silver_coin', 
     'Gold Coin': 'numismatic-overhaul:gold_coin',
     'Pokeball': 'cobblemon:poke_ball',
     'Great Ball': 'cobblemon:great_ball',
