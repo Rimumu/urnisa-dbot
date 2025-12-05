@@ -66,10 +66,10 @@ const ITEM_MAP = {
     'Ether': 'cobblemon:ether',
     'Elixir': 'cobblemon:elixir',
     'HP IV Cap': 'cobblemon_utility:hpsilvercap',
-    'Atk IV Cap': 'cobblemon_utility:atksilvercap,
+    'Atk IV Cap': 'cobblemon_utility:atksilvercap',
     'Def IV Cap': 'cobblemon_utility:defsilvercap',
     'Sp. Atk IV Cap': 'cobblemon_utility:spatksilvercap',
-    'Sp. Def IV Cap': 'ccobblemon_utility:spdefsilvercap',
+    'Sp. Def IV Cap': 'cobblemon_utility:spdefsilvercap',
     'Speed IV Cap': 'cobblemon_utility:speedsilvercap',
     'Shiny Upgrade': 'cobblemon_utility:shinycard',
     '1 TM Choice': 'cobblemon:tm_case'
