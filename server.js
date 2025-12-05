@@ -659,7 +659,7 @@ app.post('/api/inventory/claim', async (req, res) => {
         const player = link.minecraftUsername;
 
         if (item.type === 'Pokemon') {
-            command = `pokegiveother  ${player} ${item.name.replace(/\s+/g, '').toLowerCase()} level=5`; // Giving at lvl 5 is safe default
+            command = `pokegiveother ${player} ${item.name.replace(/\s+/g, '').toLowerCase()} level=5`; // Giving at lvl 5 is safe default
         } else {
             let count = 1;
             let itemName = item.name;
