@@ -72,7 +72,7 @@ const ITEM_MAP = {
     'Sp. Def IV Cap': 'cobblemon_utility:spdefsilvercap',
     'Speed IV Cap': 'cobblemon_utility:speedsilvercap',
     'Shiny Upgrade': 'cobblemon_utility:shinycard',
-    '1 TM Choice': 'cobblemon:tm_case'
+    '1 TM Choice': "lever[custom_name='{\"text\":\"TM Choice\"}',lore=['{\"text\":\"Get a TM of your choice! Redeem this to Rimu!\"}']]"
 };
 
 // --- HELPER: RCON SENDER WITH RETRY ---
