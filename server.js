@@ -80,7 +80,7 @@ const sendRconCommand = async (command) => {
     // 1. Check if configured
     if (!Rcon || !RCON_HOST || !RCON_PASSWORD) {
         console.log(`🔔 [RCON SIMULATION] ${command}`);
-        return true; // Simulate success
+        return "Simulation: Success"; // Return truthy string simulating response
     }
 
     const rcon = new Rcon({
@@ -97,7 +97,7 @@ const sendRconCommand = async (command) => {
             const response = await rcon.send(command);
             console.log(`✅ [RCON SENT] ${command} | Response: ${response}`);
             await rcon.end();
-            return true;
+            return response; // Return the actual response string
         } catch (error) {
             console.warn(`⚠️ [RCON ATTEMPT ${attempt}/${maxRetries}] Failed: ${error.message}`);
             
@@ -654,12 +654,45 @@ app.post('/api/inventory/claim', async (req, res) => {
         if (!item) return res.status(404).json({ error: "Item not found" });
         if (item.claimed) return res.status(400).json({ error: "Item already claimed" });
 
+        // 2.5 Check Online Status
+        const player = link.minecraftUsername;
+        
+        // Check if online via RCON "list" command
+        const listResponse = await sendRconCommand("list");
+        
+        if (listResponse === false) {
+             return res.status(502).json({ error: "Could not connect to Minecraft Server." });
+        }
+
+        // Parse list response (Case-insensitive check)
+        // Typical response: "There are 2 of a max of 20 players online: Player1, Player2"
+        const lowerList = listResponse.toLowerCase();
+        const lowerPlayer = player.toLowerCase();
+        
+        let isOnline = false;
+        
+        // Check if username is in the output string
+        if (lowerList.includes(lowerPlayer)) {
+            // Regex to ensure word boundary match
+            const safePlayer = lowerPlayer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+            const regex = new RegExp(`\\b${safePlayer}\\b`);
+            if (regex.test(lowerList)) {
+                isOnline = true;
+            }
+        }
+        
+        // Allow simulation to pass
+        if (listResponse.includes("Simulation")) isOnline = true;
+
+        if (!isOnline) {
+            return res.status(409).json({ error: "You must be online in-game to claim items!" });
+        }
+
         // 3. Construct Command
         let command = "";
-        const player = link.minecraftUsername;
 
         if (item.type === 'Pokemon') {
-            command = `pokegiveother ${player} ${item.name.replace(/\s+/g, '').toLowerCase()} level=5`; // Giving at lvl 5 is safe default
+            command = `pokegive ${player} ${item.name.replace(/\s+/g, '').toLowerCase()} level=5`; // Giving at lvl 5 is safe default
         } else {
             let count = 1;
             let itemName = item.name;
@@ -682,6 +715,7 @@ app.post('/api/inventory/claim', async (req, res) => {
         console.log(`🚀 Executing Claim: ${command}`);
         const rconSuccess = await sendRconCommand(command);
 
+        // Check response of give command if possible, but assume success if RCON connected
         if (rconSuccess) {
             item.claimed = true;
             item.claimedAt = new Date();
