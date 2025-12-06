@@ -160,6 +160,7 @@ const UserPackSchema = new mongoose.Schema({
     discordId: { type: String, required: true, unique: true },
     lambPacks: { type: Number, default: 0 },
     wagyuPacks: { type: Number, default: 0 },
+    lastDailyClaim: { type: Date }, // Added for daily check-in
     updatedAt: { type: Date, default: Date.now }
 });
 const UserPack = mongoose.model('UserPack', UserPackSchema);
@@ -528,6 +529,51 @@ app.post('/api/packs/use', async (req, res) => {
         res.json({ success: true, remaining: type === 'lamb' ? wallet.lambPacks : wallet.wagyuPacks });
     } catch (e) {
         res.status(500).json({ error: "Transaction failed" });
+    }
+});
+
+// 2.5 DAILY CLAIM
+app.post('/api/daily/claim', async (req, res) => {
+    const { discordId } = req.body;
+    if (!discordId) return res.status(400).json({ error: "Missing Discord ID" });
+
+    try {
+        // Find or create wallet
+        let wallet = await UserPack.findOne({ discordId });
+        if (!wallet) {
+            wallet = new UserPack({ discordId });
+        }
+
+        const now = new Date();
+        const cooldown = 24 * 60 * 60 * 1000; // 24 hours in ms
+
+        if (wallet.lastDailyClaim) {
+            const lastClaim = new Date(wallet.lastDailyClaim).getTime();
+            const elapsed = now.getTime() - lastClaim;
+
+            if (elapsed < cooldown) {
+                const remainingMs = cooldown - elapsed;
+                return res.status(403).json({ 
+                    error: "Already claimed today", 
+                    remainingMs 
+                });
+            }
+        }
+
+        // Apply Reward (1 Lamb Chop Pack)
+        wallet.lambPacks = (wallet.lambPacks || 0) + 1;
+        wallet.lastDailyClaim = now;
+        await wallet.save();
+
+        res.json({ 
+            success: true, 
+            message: "You have been rewarded with 1x Lamb Chop Pack for checking in!",
+            wallet
+        });
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Daily Claim Failed" });
     }
 });
 
