@@ -138,7 +138,8 @@ const WhitelistAppSchema = new mongoose.Schema({
     discordAvatar: String,
     minecraftUsername: String,
     status: { type: String, default: 'pending' }, // pending, approved, rejected
-    appliedAt: { type: Date, default: Date.now }
+    appliedAt: { type: Date, default: Date.now },
+    approvedAt: Date
 });
 const WhitelistApp = mongoose.model('WhitelistApp', WhitelistAppSchema);
 
@@ -422,6 +423,7 @@ app.post('/api/admin/whitelist/approve', auth, async (req, res) => {
 
         // Update DB
         app.status = 'approved';
+        app.approvedAt = new Date();
         await app.save();
 
         // Send RCON Command
