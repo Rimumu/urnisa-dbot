@@ -410,7 +410,8 @@ app.get('/api/admin/whitelist', auth, async (req, res) => {
 
 app.get('/api/admin/whitelist/approved', auth, async (req, res) => {
     try {
-        const apps = await WhitelistApp.find({ status: 'approved' }).sort({ approvedAt: -1, appliedAt: -1 }).limit(50);
+        // Removed limit to show all history as requested
+        const apps = await WhitelistApp.find({ status: 'approved' }).sort({ approvedAt: -1, appliedAt: -1 });
         res.json(apps);
     } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -974,8 +975,8 @@ app.post('/api/dev/inventory/save', (req, res) => {
 
 
 // --- KEEP ALIVE ---
-const SELF_URL = 'https://urnisa-dbot-r1lm.onrender.com';
-const BACKEND_URL = 'https://urnisa-backend-21ls.onrender.com';
+const SELF_URL = 'https://urnisa-dbot.onrender.com';
+const BACKEND_URL = 'https://urnisa-backend-3b3m.onrender.com';
 
 setInterval(() => {
     axios.get(SELF_URL).catch(() => {});
