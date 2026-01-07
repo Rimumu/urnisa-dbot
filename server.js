@@ -237,8 +237,8 @@ const syncRankDisplays = async () => {
             // 1. Ensure team exists (silent fail if already exists)
             await rcon.send(`team add ${teamName}`);
 
-            // 2. Set color
-            await rcon.send(`team modify ${teamName} color ${format.color}`);
+            // 2. Set color (Player name white)
+            await rcon.send(`team modify ${teamName} color white`);
 
             // 3. Set Prefix
             const prefixJson = JSON.stringify([
