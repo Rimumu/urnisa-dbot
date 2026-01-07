@@ -13,7 +13,7 @@ try {
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.BOT_PORT || process.env.PORT || 3002;
+const PORT = process.env.BOT_PORT || 3002;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin";
 
 app.use(express.json());
