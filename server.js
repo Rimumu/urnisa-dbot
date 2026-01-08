@@ -228,7 +228,19 @@ const syncRankDisplays = async () => {
 
         await rcon.connect();
 
+        // Staff UUIDs to SKIP (Maintain Owner/Admin ranks on server)
+        const EXCLUDED_UUIDS = [
+            "e1fd26c1-e485-4ca4-b183-0053b5c7745a", // Owner
+            "4c446d34-2d54-491f-8b71-6d5e009d4cfe"  // Admin
+        ];
+
         for (const p of players) {
+            // SKIP STAFF from rank overwrites
+            if (EXCLUDED_UUIDS.includes(p.uuid)) {
+                // console.log(`⏩ [RankSync] Skipping Staff Member: ${p.minecraftName}`);
+                continue;
+            }
+
             const format = TIER_FORMATS[p.tier];
             if (!format) continue;
 
