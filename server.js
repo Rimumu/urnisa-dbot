@@ -206,7 +206,7 @@ const TIER_FORMATS = {
     OMEGA: { color: 'green', prefix: 'OMEGA' },
     BETA: { color: 'blue', prefix: 'BETA' },
     ALPHA: { color: 'dark_purple', prefix: 'ALPHA' },
-    LEGENDARY: { color: 'yellow', prefix: 'LEGENDARY' },
+    LEGENDARY: { color: 'yellow', prefix: 'LEGEND' },
     MYTHIC: { color: 'light_purple', prefix: 'MYTHIC' },
     ETERNAL: { color: 'red', prefix: 'ETERNAL' }
 };
