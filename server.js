@@ -201,14 +201,15 @@ const RankedPlayerSchema = new mongoose.Schema({
 const RankedPlayer = mongoose.model('RankedPlayer', RankedPlayerSchema);
 
 const TIER_FORMATS = {
-    DIRT: { color: 'gold', prefix: 'DIRT' },
-    CASUAL: { color: 'gray', prefix: 'CASUAL' },
-    OMEGA: { color: 'green', prefix: 'OMEGA' },
-    BETA: { color: 'blue', prefix: 'BETA' },
-    ALPHA: { color: 'dark_purple', prefix: 'ALPHA' },
-    LEGENDARY: { color: 'yellow', prefix: 'LEGEND' },
-    MYTHIC: { color: 'light_purple', prefix: 'MYTHIC' },
-    ETERNAL: { color: 'red', prefix: 'ETERNAL' }
+    DIRT: { color: 'gold', prefix: 'DIRT', sortKey: 'j' },
+    CASUAL: { color: 'gray', prefix: 'CASUAL', sortKey: 'i' },
+    OMEGA: { color: 'green', prefix: 'OMEGA', sortKey: 'h' },
+    BETA: { color: 'blue', prefix: 'BETA', sortKey: 'g' },
+    ALPHA: { color: 'dark_purple', prefix: 'ALPHA', sortKey: 'f' },
+    LEGENDARY: { color: 'yellow', prefix: 'LEGEND', sortKey: 'e' },
+    MYTHIC: { color: 'light_purple', prefix: 'MYTHIC', sortKey: 'd' },
+    ETERNAL: { color: 'red', prefix: 'ETERNAL', sortKey: 'c' }
+    // Note: OWNER='a', ADMIN='b' are handled by the mod (excluded from RCON sync)
 };
 
 const syncRankDisplays = async () => {
@@ -244,7 +245,12 @@ const syncRankDisplays = async () => {
             const format = TIER_FORMATS[p.tier];
             if (!format) continue;
 
-            const teamName = `ranked_${p.uuid.substring(0, 8)}`;
+            // Team name format: "ranked_X_uuid8" where X is sort key (a-z)
+            // This matches the mod's naming scheme for proper tablist sorting
+            const teamName = `ranked_${format.sortKey}_${p.uuid.substring(0, 8)}`;
+
+            // 0. Remove player from any existing team first (cleans up old format teams)
+            await rcon.send(`team leave ${p.minecraftName}`);
 
             // 1. Ensure team exists (silent fail if already exists)
             await rcon.send(`team add ${teamName}`);
@@ -258,7 +264,7 @@ const syncRankDisplays = async () => {
             ]);
             await rcon.send(`team modify ${teamName} prefix ${prefixJson}`);
 
-            // 4. Add player to team (just in case they aren't in it)
+            // 4. Add player to team
             await rcon.send(`team join ${teamName} ${p.minecraftName}`);
         }
 
