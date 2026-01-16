@@ -1073,8 +1073,8 @@ app.post('/api/dev/inventory/save', (req, res) => {
 
 
 // --- KEEP ALIVE ---
-const SELF_URL = 'https://urnisa-dbot-r1lm.onrender.com';
-const BACKEND_URL = 'https://urnisa-backend-21ls.onrender.com';
+const SELF_URL = 'https://urnisa-dbot.onrender.com';
+const BACKEND_URL = 'https://urnisa-backend-3b3m.onrender.com';
 
 setInterval(() => {
     axios.get(SELF_URL).catch(() => { });
