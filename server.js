@@ -290,6 +290,7 @@ syncRankDisplays(); // Initial sync on startup
 // --- CACHING SYSTEMS ---
 const messageCache = {}; // channelId -> { data, timestamp }
 const memberCache = new Map(); // userId -> { data, timestamp }
+const activeMemberFetches = new Map(); // userId -> Promise (to prevent concurrent duplicate API calls)
 
 // --- CHAT PREVIEW LOGIC ---
 const fetchDiscordMessages = async (channelId) => {
@@ -311,23 +312,45 @@ const fetchGuildMember = async (guildId, userId) => {
 
     const cacheKey = `${guildId}:${userId}`;
     const cached = memberCache.get(cacheKey);
-    // Cache members for 15 minutes to reduce API calls significantly
-    if (cached && (Date.now() - cached.timestamp < 15 * 60 * 1000)) {
+    // Cache members for 60 minutes to reduce API calls significantly
+    if (cached && (Date.now() - cached.timestamp < 60 * 60 * 1000)) {
         return cached.data;
     }
 
-    try {
-        const response = await axios.get(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
-            headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }
-        });
+    // Reuse in-flight promise if we are already fetching this user to avoid concurrent duplicates
+    if (activeMemberFetches.has(cacheKey)) {
+        return activeMemberFetches.get(cacheKey);
+    }
 
-        memberCache.set(cacheKey, {
-            data: response.data,
-            timestamp: Date.now()
-        });
+    const fetchPromise = (async () => {
+        try {
+            // Space out member fetches slightly to avoid sudden bursts
+            await new Promise(resolve => setTimeout(resolve, 50));
+            const response = await axios.get(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
+                headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+                timeout: 3000
+            });
 
-        return response.data;
-    } catch (error) { return null; }
+            const memberData = response.data;
+            memberCache.set(cacheKey, {
+                data: memberData,
+                timestamp: Date.now()
+            });
+            return memberData;
+        } catch (error) {
+            // Cache failure for 10 minutes so we don't spam the API on repeated failures/404s
+            memberCache.set(cacheKey, {
+                data: null,
+                timestamp: Date.now() - (60 * 60 * 1000) + (10 * 60 * 1000) // expires in 10 mins
+            });
+            return null;
+        } finally {
+            activeMemberFetches.delete(cacheKey);
+        }
+    })();
+
+    activeMemberFetches.set(cacheKey, fetchPromise);
+    return fetchPromise;
 };
 
 // --- ROUTES ---
@@ -339,9 +362,9 @@ app.get('/api/messages', async (req, res) => {
     const { channelId } = req.query;
     if (!channelId) return res.status(400).json({ error: 'Channel ID required' });
 
-    // Check Message Cache (5 minutes / 300 seconds to prevent rate limits)
+    // Check Message Cache (serve cached results if requested within 15 seconds)
     const cachedMsg = messageCache[channelId];
-    if (cachedMsg && (Date.now() - cachedMsg.timestamp < 5 * 60 * 1000)) {
+    if (cachedMsg && (Date.now() - cachedMsg.timestamp < 15 * 1000)) {
         return res.json(cachedMsg.data);
     }
 
@@ -353,7 +376,7 @@ app.get('/api/messages', async (req, res) => {
             throw new Error("Discord API response is not an array");
         }
 
-        // Parallel fetch for members with individual caching inside fetchGuildMember
+        // Fetch member data with individual caching, deduplicated and safely handled
         const enhancedMessages = await Promise.all(messages.map(async (msg) => {
             const memberData = await fetchGuildMember(GUILD_ID, msg.author.id);
             return {
@@ -372,9 +395,9 @@ app.get('/api/messages', async (req, res) => {
 
         res.json(finalData);
     } catch (error) {
-        // Fallback: If we hit a rate limit (429) but have stale data, return that instead of erroring
+        // Fallback: If we hit a rate limit or other error but have stale data, return that instead of erroring
         if (cachedMsg) {
-            console.warn("⚠️ Discord Rate Limit hit. Serving stale cache.");
+            console.warn("⚠️ Discord API call failed. Serving stale cache.");
             return res.json(cachedMsg.data);
         }
         res.status(500).json({ error: 'Failed' });
