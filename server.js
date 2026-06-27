@@ -348,6 +348,11 @@ app.get('/api/messages', async (req, res) => {
     try {
         const messages = await fetchDiscordMessages(channelId);
 
+        // Ensure messages is an array
+        if (!Array.isArray(messages)) {
+            throw new Error("Discord API response is not an array");
+        }
+
         // Parallel fetch for members with individual caching inside fetchGuildMember
         const enhancedMessages = await Promise.all(messages.map(async (msg) => {
             const memberData = await fetchGuildMember(GUILD_ID, msg.author.id);
