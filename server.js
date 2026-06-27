@@ -339,9 +339,9 @@ app.get('/api/messages', async (req, res) => {
     const { channelId } = req.query;
     if (!channelId) return res.status(400).json({ error: 'Channel ID required' });
 
-    // Check Message Cache (30 seconds)
+    // Check Message Cache (5 minutes / 300 seconds to prevent rate limits)
     const cachedMsg = messageCache[channelId];
-    if (cachedMsg && (Date.now() - cachedMsg.timestamp < 30 * 1000)) {
+    if (cachedMsg && (Date.now() - cachedMsg.timestamp < 5 * 60 * 1000)) {
         return res.json(cachedMsg.data);
     }
 
