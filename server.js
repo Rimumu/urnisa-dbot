@@ -158,20 +158,20 @@ const InventoryItemSchema = new mongoose.Schema({
 const InventoryItem = mongoose.model('InventoryItem', InventoryItemSchema);
 
 // User Pack Wallet Schema
-const UserPackSchema = new mongoose.Schema({
+const UserKeySchema = new mongoose.Schema({
     discordId: { type: String, required: true, unique: true },
-    lambPacks: { type: Number, default: 0 },
-    wagyuPacks: { type: Number, default: 0 },
+    lambKeys: { type: Number, default: 0 },
+    steakKeys: { type: Number, default: 0 },
     lastDailyClaim: { type: Date }, // Added for daily check-in
     updatedAt: { type: Date, default: Date.now }
 });
-const UserPack = mongoose.model('UserPack', UserPackSchema);
+const UserKey = mongoose.model('UserKey', UserKeySchema);
 
 // Redemption Code Schema (UPDATED)
 const RedemptionCodeSchema = new mongoose.Schema({
     code: { type: String, required: true, unique: true },
-    type: { type: String, required: true }, // 'lamb' or 'wagyu'
-    packAmount: { type: Number, default: 1 },
+    type: { type: String, required: true }, // 'lamb' or 'steak'
+    keyAmount: { type: Number, default: 1 },
 
     // Usage Logic
     usageType: { type: String, default: 'once_global' }, // 'once_global', 'once_per_user', 'infinite', 'time_limited'
@@ -626,7 +626,7 @@ app.post('/api/admin/users/reset-daily', auth, async (req, res) => {
             targetDiscordId = link.discordId;
         }
 
-        const wallet = await UserPack.findOne({ discordId: targetDiscordId });
+        const wallet = await UserKey.findOne({ discordId: targetDiscordId });
         if (!wallet) {
             return res.status(404).json({ error: "User wallet/history not found." });
         }
@@ -645,9 +645,9 @@ app.post('/api/admin/users/reset-daily', auth, async (req, res) => {
 // --- CODE GENERATION (Admin) ---
 // UPDATED to support amounts and limits
 app.post('/api/admin/codes/generate', auth, async (req, res) => {
-    const { type, amount = 1, packAmount = 1, usageType = 'once_global', hours = 0 } = req.body;
+    const { type, amount = 1, keyAmount = 1, usageType = 'once_global', hours = 0 } = req.body;
 
-    if (!type || !['lamb', 'wagyu'].includes(type)) return res.status(400).json({ error: "Invalid pack type" });
+    if (!type || !['lamb', 'steak'].includes(type)) return res.status(400).json({ error: "Invalid pack type" });
 
     try {
         const codes = [];
@@ -662,7 +662,7 @@ app.post('/api/admin/codes/generate', auth, async (req, res) => {
             codes.push({
                 code: codeStr,
                 type,
-                packAmount: Math.max(1, parseInt(packAmount)),
+                keyAmount: Math.max(1, parseInt(keyAmount)),
                 usageType, // 'once_global', 'once_per_user', 'infinite', 'time_limited'
                 expiresAt,
                 isRedeemed: false,
@@ -707,8 +707,8 @@ app.get('/api/packs', async (req, res) => {
     if (!discordId) return res.status(400).json({ error: "Discord ID required" });
 
     try {
-        let wallet = await UserPack.findOne({ discordId });
-        if (!wallet) wallet = { lambPacks: 0, wagyuPacks: 0 }; // Default
+        let wallet = await UserKey.findOne({ discordId });
+        if (!wallet) wallet = { lambKeys: 0, steakKeys: 0 }; // Default
         res.json(wallet);
     } catch (e) {
         res.status(500).json({ error: "Fetch failed" });
@@ -721,21 +721,21 @@ app.post('/api/packs/use', async (req, res) => {
     if (!discordId || !type) return res.status(400).json({ error: "Missing data" });
 
     try {
-        const wallet = await UserPack.findOne({ discordId });
+        const wallet = await UserKey.findOne({ discordId });
         if (!wallet) return res.status(404).json({ error: "No wallet found" });
 
         if (type === 'lamb') {
-            if (wallet.lambPacks < 1) return res.status(403).json({ error: "Not enough packs" });
-            wallet.lambPacks -= 1;
-        } else if (type === 'wagyu') {
-            if (wallet.wagyuPacks < 1) return res.status(403).json({ error: "Not enough packs" });
-            wallet.wagyuPacks -= 1;
+            if (wallet.lambKeys < 1) return res.status(403).json({ error: "Not enough keys" });
+            wallet.lambKeys -= 1;
+        } else if (type === 'steak') {
+            if (wallet.steakKeys < 1) return res.status(403).json({ error: "Not enough keys" });
+            wallet.steakKeys -= 1;
         } else {
             return res.status(400).json({ error: "Invalid pack type" });
         }
 
         await wallet.save();
-        res.json({ success: true, remaining: type === 'lamb' ? wallet.lambPacks : wallet.wagyuPacks });
+        res.json({ success: true, remaining: type === 'lamb' ? wallet.lambKeys : wallet.steakKeys });
     } catch (e) {
         res.status(500).json({ error: "Transaction failed" });
     }
@@ -748,9 +748,9 @@ app.post('/api/daily/claim', async (req, res) => {
 
     try {
         // Find or create wallet
-        let wallet = await UserPack.findOne({ discordId });
+        let wallet = await UserKey.findOne({ discordId });
         if (!wallet) {
-            wallet = new UserPack({ discordId });
+            wallet = new UserKey({ discordId });
         }
 
         const now = new Date();
@@ -770,7 +770,7 @@ app.post('/api/daily/claim', async (req, res) => {
         }
 
         // Apply Reward (1 Lamb Chop Pack)
-        wallet.lambPacks = (wallet.lambPacks || 0) + 1;
+        wallet.lambKeys = (wallet.lambKeys || 0) + 1;
         wallet.lastDailyClaim = now;
         await wallet.save();
 
@@ -838,17 +838,17 @@ app.post('/api/codes/redeem', async (req, res) => {
         await codeRecord.save();
 
         // Add Pack to User Wallet
-        const packsToAdd = codeRecord.packAmount || 1;
-        const wallet = await UserPack.findOneAndUpdate(
+        const keysToAdd = codeRecord.keyAmount || 1;
+        const wallet = await UserKey.findOneAndUpdate(
             { discordId },
             {
                 $setOnInsert: { discordId },
-                $inc: { [codeRecord.type === 'lamb' ? 'lambPacks' : 'wagyuPacks']: packsToAdd }
+                $inc: { [codeRecord.type === 'lamb' ? 'lambKeys' : 'steakKeys']: keysToAdd }
             },
             { upsert: true, new: true }
         );
 
-        res.json({ success: true, type: codeRecord.type, amount: packsToAdd, wallet });
+        res.json({ success: true, type: codeRecord.type, amount: keysToAdd, wallet });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Redemption failed" });
@@ -874,101 +874,6 @@ app.post('/api/inventory/save', async (req, res) => {
 
         await InventoryItem.insertMany(newItems);
         console.log(`📦 Saved ${items.length} items for user ${discordId}`);
-
-        // --- DISCORD LOGGING ---
-        if (DISCORD_BOT_TOKEN) {
-            try {
-                // 1. Fetch User Info
-                let username = "Unknown User";
-                let avatarUrl = "";
-                try {
-                    const userRes = await axios.get(`https://discord.com/api/v10/users/${discordId}`, {
-                        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }
-                    });
-                    username = userRes.data.global_name || userRes.data.username;
-                    avatarUrl = userRes.data.avatar
-                        ? `https://cdn.discordapp.com/avatars/${discordId}/${userRes.data.avatar}.png`
-                        : `https://cdn.discordapp.com/embed/avatars/${parseInt(userRes.data.discriminator || 0) % 5}.png`;
-                } catch (e) { console.error("User fetch failed for gacha log"); }
-
-                // 2. Pack Name Handling
-                const packName = packType === 'wagyu' ? 'Wagyu A5' : 'Lamb Chop';
-
-                // 3. Build Item List
-                let hasMythic = false;
-                let hasLegendary = false;
-                let highlightImage = null;
-
-                const descriptionLines = items.map(item => {
-                    const r = item.rarity;
-                    if (r === 'Mythical') {
-                        hasMythic = true;
-                        if (!highlightImage) highlightImage = item;
-                        return `**🌟 [MYTHICAL] ${item.name}**`;
-                    }
-                    if (r === 'Legendary') {
-                        hasLegendary = true;
-                        if (!highlightImage && !hasMythic) highlightImage = item;
-                        return `**✨ [LEGENDARY] ${item.name}**`;
-                    }
-                    if (r === 'Ultra-Rare') return `🟣 [Ultra-Rare] ${item.name}`;
-                    if (r === 'Rare') return `🔵 [Rare] ${item.name}`;
-                    if (r === 'Uncommon') return `🟢 [Uncommon] ${item.name}`;
-                    return `⚪ [Common] ${item.name}`;
-                });
-
-                // 4. Determine Color & Title
-                let color = 0x3498db; // Blue default
-                let title = "📦 Pack Opened";
-
-                if (hasMythic) {
-                    color = 0xff00ff; // Magenta
-                    title = "🚨 MYTHIC PULL! 🚨";
-                } else if (hasLegendary) {
-                    color = 0xffd700; // Gold
-                    title = "✨ LEGENDARY PULL! ✨";
-                }
-
-                const embed = {
-                    title: title,
-                    description: descriptionLines.join('\n'),
-                    color: color,
-                    author: {
-                        name: `${username} opened a ${packName} pack`,
-                        icon_url: avatarUrl
-                    },
-                    timestamp: new Date().toISOString(),
-                    footer: { text: "Urnisa Cobblemon Gacha" }
-                };
-
-                // Add image for high tier pulls
-                if (highlightImage) {
-                    let imageUrl = highlightImage.image; // Use custom image if available
-
-                    if (!imageUrl && highlightImage.type === 'Pokemon') {
-                        const formattedName = highlightImage.name.toLowerCase()
-                            .replace(/[.']/g, '')
-                            .replace(/♀/g, '-f')
-                            .replace(/♂/g, '-m')
-                            .replace(/\s+/g, '-');
-                        imageUrl = `https://cobblemon.tools/pokedex/pokemon/${formattedName}/sprite.png`;
-                    }
-
-                    if (imageUrl) {
-                        embed.image = { url: imageUrl };
-                    }
-                }
-
-                await axios.post(
-                    `https://discord.com/api/v10/channels/${GACHA_LOG_CHANNEL}/messages`,
-                    { embeds: [embed] },
-                    { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` } }
-                );
-
-            } catch (err) {
-                console.error("Failed to send gacha log to Discord:", err.message);
-            }
-        }
 
         res.json({ success: true });
     } catch (e) {
@@ -1085,7 +990,7 @@ app.post('/api/inventory/claim', async (req, res) => {
 // --- DEV ENDPOINTS ---
 app.get('/api/dev/packs', (req, res) => {
     // Return infinite packs for testing
-    res.json({ lambPacks: 999, wagyuPacks: 999 });
+    res.json({ lambKeys: 999, steakKeys: 999 });
 });
 
 app.post('/api/dev/packs/use', (req, res) => {
