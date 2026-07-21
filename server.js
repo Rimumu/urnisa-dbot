@@ -776,7 +776,7 @@ app.post('/api/daily/claim', async (req, res) => {
 
         res.json({
             success: true,
-            message: "You have been rewarded with 1x Lamb Chop Pack for checking in!",
+            message: "You have been rewarded with 1x Lamb Crate Key for checking in!",
             wallet
         });
 
