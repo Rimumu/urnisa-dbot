@@ -127,6 +127,8 @@ const MinecraftLinkSchema = new mongoose.Schema({
     discordUsername: String,
     discordAvatar: String,
     minecraftUsername: { type: String, required: true, unique: true },
+    twitchUsername: String,
+    twitchAvatar: String,
     linkedAt: { type: Date, default: Date.now }
 });
 const MinecraftLink = mongoose.model('MinecraftLink', MinecraftLinkSchema);
@@ -137,6 +139,8 @@ const WhitelistAppSchema = new mongoose.Schema({
     discordUsername: String,
     discordAvatar: String,
     minecraftUsername: String,
+    twitchUsername: String,
+    twitchAvatar: String,
     status: { type: String, default: 'pending' }, // pending, approved, rejected
     appliedAt: { type: Date, default: Date.now },
     approvedAt: { type: Date } // Added to track approval time
@@ -448,7 +452,7 @@ app.post('/api/auth/discord', async (req, res) => {
 
 // 3. Link Account
 app.post('/api/minecraft/link', async (req, res) => {
-    const { discordId, discordUsername, discordAvatar, minecraftUsername } = req.body;
+    const { discordId, discordUsername, discordAvatar, minecraftUsername, twitchUsername, twitchAvatar } = req.body;
     if (!discordId || !minecraftUsername) return res.status(400).json({ error: "Missing fields" });
 
     try {
@@ -457,7 +461,7 @@ app.post('/api/minecraft/link', async (req, res) => {
 
         await MinecraftLink.findOneAndUpdate(
             { discordId },
-            { discordUsername, discordAvatar, minecraftUsername, linkedAt: new Date() },
+            { discordUsername, discordAvatar, minecraftUsername, twitchUsername, twitchAvatar, linkedAt: new Date() },
             { upsert: true, new: true }
         );
         res.json({ success: true, minecraftUsername });
@@ -483,6 +487,7 @@ app.post('/api/whitelist/apply', async (req, res) => {
     // 1. Check DB Link
     const link = await MinecraftLink.findOne({ discordId });
     if (!link || !link.minecraftUsername) return res.status(400).json({ error: "No Minecraft account linked!" });
+    if (!link.twitchUsername) return res.status(400).json({ error: "No Twitch account linked!" });
 
     // 2. Check existing pending app
     const existingApp = await WhitelistApp.findOne({ discordId, status: 'pending' });
@@ -508,6 +513,8 @@ app.post('/api/whitelist/apply', async (req, res) => {
         discordUsername: link.discordUsername,
         discordAvatar: link.discordAvatar,
         minecraftUsername: link.minecraftUsername,
+        twitchUsername: link.twitchUsername,
+        twitchAvatar: link.twitchAvatar,
         status: 'pending',
         appliedAt: new Date()
     });
