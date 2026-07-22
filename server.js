@@ -641,7 +641,7 @@ app.post('/api/admin/whitelist/approve', auth, async (req, res) => {
                 await axios.post(
                     `https://discord.com/api/v10/channels/${WHITELIST_NOTIFY_CHANNEL}/messages`,
                     {
-                        content: `<@${app.discordId}> You have been whitelisted! 🎉`
+                        content: `<@${app.discordId}> You have been whitelisted!`
                     },
                     {
                         headers: {
