@@ -699,6 +699,35 @@ app.post('/api/admin/codes/delete', auth, async (req, res) => {
     }
 });
 
+// Maintenance Wipe Endpoint for Minecraft Data (DANGER ZONE)
+app.post('/api/admin/maintenance/wipe-minecraft-data', auth, async (req, res) => {
+    const { scope } = req.body; // 'all', 'inventory', 'currency', 'approved_users'
+    try {
+        console.log(`⚠️ Admin triggered Minecraft Data Wipe on Bot Server. Scope: ${scope}`);
+        const results = {};
+
+        if (!scope || scope === 'all' || scope === 'inventory') {
+            const delRes = await InventoryItem.deleteMany({});
+            results.inventory = { success: true, count: delRes.deletedCount };
+        }
+
+        if (!scope || scope === 'all' || scope === 'currency') {
+            const delRes = await UserKey.deleteMany({});
+            results.currency = { success: true, count: delRes.deletedCount };
+        }
+
+        if (!scope || scope === 'all' || scope === 'approved_users') {
+            const delRes = await WhitelistApp.deleteMany({ status: 'approved' });
+            results.approvedUsers = { success: true, count: delRes.deletedCount };
+        }
+
+        res.json({ success: true, results });
+    } catch (e) {
+        console.error("❌ Failed to wipe Minecraft data on Bot Server:", e);
+        res.status(500).json({ error: "Failed to wipe Minecraft data", details: e.message });
+    }
+});
+
 // --- INVENTORY, PACKS & GACHA API ---
 
 // 1. Fetch User Pack Balance
