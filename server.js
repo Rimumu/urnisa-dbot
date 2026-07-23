@@ -896,6 +896,91 @@ app.post('/api/codes/redeem', async (req, res) => {
     }
 });
 
+// --- SHOP & KEY PURCHASING ---
+app.post('/api/shop/buy', async (req, res) => {
+    const { discordId, itemType, quantity = 1 } = req.body;
+
+    if (!discordId || !itemType) {
+        return res.status(400).json({ error: "Missing required fields: discordId and itemType" });
+    }
+
+    if (!['lamb', 'steak'].includes(itemType)) {
+        return res.status(400).json({ error: "Invalid item type. Only 'lamb' and 'steak' packs are purchasable." });
+    }
+
+    const qty = parseInt(quantity) || 1;
+    if (qty < 1) return res.status(400).json({ error: "Quantity must be at least 1." });
+
+    try {
+        const link = await MinecraftLink.findOne({ discordId });
+        if (!link || !link.twitchUsername) {
+            return res.status(400).json({ error: "No Twitch account linked! Please link your Twitch account on the Minecraft page before buying keys." });
+        }
+
+        const backendUrl = process.env.BACKEND_URL || BACKEND_URL || 'https://urnisa-backend-21ls.onrender.com';
+        
+        // 1. Fetch current Nisaball balance
+        let currentNisaballs = 0;
+        try {
+            const balanceRes = await axios.get(`${backendUrl}/api/nisathon/user/${encodeURIComponent(link.twitchUsername.trim())}`);
+            currentNisaballs = balanceRes.data.totalNisaballs || 0;
+        } catch (err) {
+            console.error("Failed to fetch user balance from backend:", err);
+            return res.status(500).json({ error: "Failed to verify Nisaballs balance with the Twitch economy. Please try again later." });
+        }
+
+        // 2. Cost calculation
+        const costs = { lamb: 5, steak: 15 };
+        const unitCost = costs[itemType];
+        const totalCost = unitCost * qty;
+
+        if (currentNisaballs < totalCost) {
+            return res.status(400).json({ error: `Insufficient Nisaballs! You need ${totalCost} Nisaballs for ${qty} ${itemType === 'lamb' ? 'Lamb Crate Key' : 'Steak Crate Key'}${qty > 1 ? 's' : ''}, but you only have ${Math.floor(currentNisaballs)}.` });
+        }
+
+        // 3. Deduct Nisaballs on backend
+        try {
+            const deductRes = await axios.post(`${backendUrl}/api/nisathon/test-event`, {
+                type: 'nisaball',
+                user: link.twitchUsername,
+                amount: -totalCost,
+                tier: '1000'
+            }, {
+                headers: { 'Authorization': ADMIN_PASSWORD }
+            });
+
+            if (!deductRes.data || deductRes.data.error) {
+                throw new Error(deductRes.data ? deductRes.data.error : "Failed to deduct Nisaballs via backend");
+            }
+        } catch (err) {
+            console.error("Failed to process Nisaball deduction:", err);
+            return res.status(500).json({ error: "Failed to process payment. Nisaballs were not deducted, and keys were not granted." });
+        }
+
+        // 4. Update the UserKey wallet
+        const wallet = await UserKey.findOneAndUpdate(
+            { discordId },
+            {
+                $setOnInsert: { discordId },
+                $inc: { [itemType === 'lamb' ? 'lambKeys' : 'steakKeys']: qty }
+            },
+            { upsert: true, new: true }
+        );
+
+        res.json({
+            success: true,
+            itemType,
+            quantity: qty,
+            cost: totalCost,
+            newBalance: currentNisaballs - totalCost,
+            wallet
+        });
+    } catch (e) {
+        console.error("Shop purchase error:", e);
+        res.status(500).json({ error: "Failed to complete purchase due to an internal server error." });
+    }
+});
+
 // 4. Save Gacha Results
 app.post('/api/inventory/save', async (req, res) => {
     const { discordId, items, packType } = req.body;
