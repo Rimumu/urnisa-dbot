@@ -215,19 +215,22 @@ const fetchDiscordMessages = async (channelId) => {
     }
 };
 
-const fetchGuildMember = async (guildId, userId) => {
+const fetchGuildMember = async (guildId, userId, force = false) => {
     if (!DISCORD_BOT_TOKEN) return null;
 
     const cacheKey = `${guildId}:${userId}`;
-    const cached = memberCache.get(cacheKey);
-    // Cache members for 60 minutes to reduce API calls significantly
-    if (cached && (Date.now() - cached.timestamp < 60 * 60 * 1000)) {
-        return cached.data;
-    }
+    
+    if (!force) {
+        const cached = memberCache.get(cacheKey);
+        // Cache members for 60 minutes to reduce API calls significantly
+        if (cached && (Date.now() - cached.timestamp < 60 * 60 * 1000)) {
+            return cached.data;
+        }
 
-    // Reuse in-flight promise if we are already fetching this user to avoid concurrent duplicates
-    if (activeMemberFetches.has(cacheKey)) {
-        return activeMemberFetches.get(cacheKey);
+        // Reuse in-flight promise if we are already fetching this user to avoid concurrent duplicates
+        if (activeMemberFetches.has(cacheKey)) {
+            return activeMemberFetches.get(cacheKey);
+        }
     }
 
     const fetchPromise = (async () => {
@@ -470,8 +473,8 @@ app.post('/api/whitelist/apply', async (req, res) => {
     const approvedApp = await WhitelistApp.findOne({ discordId, status: 'approved' });
     if (approvedApp) return res.status(200).json({ message: "You are already whitelisted!" });
 
-    // 4. Check Discord Roles
-    const member = await fetchGuildMember(GUILD_ID, discordId);
+    // 4. Check Discord Roles (force fetch to bypass cache)
+    const member = await fetchGuildMember(GUILD_ID, discordId, true);
     if (!member) return res.status(403).json({ error: "You are not in the Discord server!" });
 
     const roles = member.roles || [];
