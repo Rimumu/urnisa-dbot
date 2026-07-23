@@ -631,7 +631,7 @@ app.post('/api/admin/users/reset-daily', auth, async (req, res) => {
 app.post('/api/admin/codes/generate', auth, async (req, res) => {
     const { type, amount = 1, keyAmount = 1, usageType = 'once_global', hours = 0 } = req.body;
 
-    if (!type || !['lamb', 'steak'].includes(type)) return res.status(400).json({ error: "Invalid pack type" });
+    if (!type || !['lamb', 'steak', 'nisaball'].includes(type)) return res.status(400).json({ error: "Invalid pack type" });
 
     try {
         const codes = [];
@@ -849,6 +849,34 @@ app.post('/api/codes/redeem', async (req, res) => {
         }
 
         await codeRecord.save();
+
+        if (codeRecord.type === 'nisaball') {
+            const link = await MinecraftLink.findOne({ discordId });
+            if (!link || !link.twitchUsername) {
+                return res.status(400).json({ error: "No Twitch account linked! Please link your Twitch account before redeeming Nisaball codes." });
+            }
+
+            const backendUrl = process.env.BACKEND_URL || BACKEND_URL || 'https://urnisa-backend-21ls.onrender.com';
+            try {
+                const addNisaballRes = await axios.post(`${backendUrl}/api/nisathon/test-event`, {
+                    type: 'nisaball',
+                    user: link.twitchUsername,
+                    amount: codeRecord.keyAmount || 1,
+                    tier: '1000'
+                }, {
+                    headers: { 'Authorization': ADMIN_PASSWORD }
+                });
+
+                if (!addNisaballRes.data || addNisaballRes.data.error) {
+                    throw new Error(addNisaballRes.data ? addNisaballRes.data.error : "Failed to add Nisaballs via backend");
+                }
+            } catch (err) {
+                console.error("Failed to link nisaball credit to backend:", err);
+                return res.status(500).json({ error: "Failed to credit Nisaballs to your Twitch account. Please contact an admin." });
+            }
+
+            return res.json({ success: true, type: 'nisaball', amount: codeRecord.keyAmount || 1, wallet: null });
+        }
 
         // Add Pack to User Wallet
         const keysToAdd = codeRecord.keyAmount || 1;
