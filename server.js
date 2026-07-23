@@ -856,7 +856,7 @@ app.post('/api/codes/redeem', async (req, res) => {
                 return res.status(400).json({ error: "No Twitch account linked! Please link your Twitch account before redeeming Nisaball codes." });
             }
 
-            const backendUrl = process.env.BACKEND_URL || BACKEND_URL || 'https://urnisa-backend-21ls.onrender.com';
+            const backendUrl = process.env.BACKEND_URL || 'https://urnisa-backend-21ls.onrender.com';
             try {
                 const addNisaballRes = await axios.post(`${backendUrl}/api/nisathon/test-event`, {
                     type: 'nisaball',
@@ -1048,7 +1048,7 @@ app.post('/api/dev/inventory/save', (req, res) => {
 
 // --- KEEP ALIVE ---
 const SELF_URL = 'https://urnisa-dbot.onrender.com';
-const BACKEND_URL = 'https://urnisa-backend-3b3m.onrender.com';
+const BACKEND_URL = 'https://urnisa-backend-21ls.onrender.com';
 
 setInterval(() => {
     axios.get(SELF_URL).catch(() => { });
