@@ -981,6 +981,84 @@ app.post('/api/shop/buy', async (req, res) => {
     }
 });
 
+app.post('/api/shop/spin', async (req, res) => {
+    const { discordId } = req.body;
+
+    if (!discordId) {
+        return res.status(400).json({ error: "Missing required field: discordId" });
+    }
+
+    try {
+        const link = await MinecraftLink.findOne({ discordId });
+        if (!link || !link.twitchUsername) {
+            return res.status(400).json({ error: "No Twitch account linked! Please link your Twitch account on the Minecraft page before spinning the wheel." });
+        }
+
+        const backendUrl = process.env.BACKEND_URL || 'https://urnisa-backend-21ls.onrender.com';
+        
+        // 1. Fetch current Nisaball balance
+        let currentNisaballs = 0;
+        try {
+            const balanceRes = await axios.get(`${backendUrl}/api/nisathon/user/${encodeURIComponent(link.twitchUsername.trim())}`);
+            currentNisaballs = balanceRes.data.totalNisaballs || 0;
+        } catch (err) {
+            console.error("Failed to fetch user balance from backend:", err);
+            return res.status(500).json({ error: "Failed to verify Nisaballs balance with the Twitch economy. Please try again later." });
+        }
+
+        const totalCost = 1;
+
+        if (currentNisaballs < totalCost) {
+            return res.status(400).json({ error: `Insufficient Nisaballs! You need 1 Nisaball to spin the wheel, but you only have ${Math.floor(currentNisaballs)}.` });
+        }
+
+        // 2. Determine spin outcome (50/50)
+        const isLamb = Math.random() < 0.50;
+        const itemType = isLamb ? 'lamb' : 'steak';
+
+        // 3. Deduct 1 Nisaball on backend
+        try {
+            const deductRes = await axios.post(`${backendUrl}/api/nisathon/test-event`, {
+                type: 'nisaball',
+                user: link.twitchUsername,
+                amount: -totalCost,
+                tier: '1000'
+            }, {
+                headers: { 'Authorization': ADMIN_PASSWORD }
+            });
+
+            if (!deductRes.data || deductRes.data.error) {
+                throw new Error(deductRes.data ? deductRes.data.error : "Failed to deduct Nisaball via backend");
+            }
+        } catch (err) {
+            console.error("Failed to process Nisaball deduction:", err);
+            return res.status(500).json({ error: "Failed to process payment. Nisaballs were not deducted, and wheel spin was cancelled." });
+        }
+
+        // 4. Update the UserKey wallet
+        const wallet = await UserKey.findOneAndUpdate(
+            { discordId },
+            {
+                $setOnInsert: { discordId },
+                $inc: { [itemType === 'lamb' ? 'lambKeys' : 'steakKeys']: 1 }
+            },
+            { upsert: true, new: true }
+        );
+
+        res.json({
+            success: true,
+            itemType,
+            quantity: 1,
+            cost: totalCost,
+            newBalance: currentNisaballs - totalCost,
+            wallet
+        });
+    } catch (e) {
+        console.error("Shop spin error:", e);
+        res.status(500).json({ error: "Failed to complete wheel spin due to an internal server error." });
+    }
+});
+
 // 4. Save Gacha Results
 app.post('/api/inventory/save', async (req, res) => {
     const { discordId, items, packType } = req.body;
