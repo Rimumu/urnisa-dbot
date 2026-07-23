@@ -859,7 +859,7 @@ app.post('/api/codes/redeem', async (req, res) => {
             const backendUrl = process.env.BACKEND_URL || 'https://urnisa-backend-21ls.onrender.com';
             try {
                 const addNisaballRes = await axios.post(`${backendUrl}/api/nisathon/test-event`, {
-                    type: 'nisaball',
+                    type: 'reward',
                     user: link.twitchUsername,
                     amount: codeRecord.keyAmount || 1,
                     tier: '1000'
