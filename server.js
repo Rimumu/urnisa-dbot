@@ -1058,7 +1058,7 @@ app.post('/api/shop/spin', async (req, res) => {
 
         // 2. Determine spin outcome (50/50)
         const isLamb = Math.random() < 0.50;
-        const itemType = isLamb ? 'lamb' : 'steak';
+        const itemType = isLamb ? 'lamb' : 'wagyu';
 
         // 3. Deduct 1 Nisaball on backend
         try {
