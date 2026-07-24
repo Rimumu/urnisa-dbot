@@ -862,7 +862,9 @@ app.post('/api/codes/redeem', async (req, res) => {
                     type: 'reward',
                     user: link.twitchUsername,
                     amount: codeRecord.keyAmount || 1,
-                    tier: '1000'
+                    tier: '1000',
+                    isNisathon: false,
+                    hidden: true
                 }, {
                     headers: { 'Authorization': ADMIN_PASSWORD }
                 });
@@ -941,10 +943,12 @@ app.post('/api/shop/buy', async (req, res) => {
         // 3. Deduct Nisaballs on backend
         try {
             const deductRes = await axios.post(`${backendUrl}/api/nisathon/test-event`, {
-                type: 'nisaball',
+                type: 'shop',
                 user: link.twitchUsername,
                 amount: -totalCost,
-                tier: '1000'
+                tier: '1000',
+                isNisathon: false,
+                hidden: true
             }, {
                 headers: { 'Authorization': ADMIN_PASSWORD }
             });
@@ -972,7 +976,7 @@ app.post('/api/shop/buy', async (req, res) => {
             itemType,
             quantity: qty,
             cost: totalCost,
-            newBalance: currentNisaballs - totalCost,
+            newBalance: Math.floor(Math.max(0, currentNisaballs - totalCost)),
             wallet
         });
     } catch (e) {
@@ -1019,10 +1023,12 @@ app.post('/api/shop/spin', async (req, res) => {
         // 3. Deduct 1 Nisaball on backend
         try {
             const deductRes = await axios.post(`${backendUrl}/api/nisathon/test-event`, {
-                type: 'nisaball',
+                type: 'shop',
                 user: link.twitchUsername,
                 amount: -totalCost,
-                tier: '1000'
+                tier: '1000',
+                isNisathon: false,
+                hidden: true
             }, {
                 headers: { 'Authorization': ADMIN_PASSWORD }
             });
@@ -1050,7 +1056,7 @@ app.post('/api/shop/spin', async (req, res) => {
             itemType,
             quantity: 1,
             cost: totalCost,
-            newBalance: currentNisaballs - totalCost,
+            newBalance: Math.floor(Math.max(0, currentNisaballs - totalCost)),
             wallet
         });
     } catch (e) {
@@ -1210,7 +1216,7 @@ app.post('/api/dev/inventory/save', (req, res) => {
 
 
 // --- KEEP ALIVE ---
-const SELF_URL = 'https://urnisa-dbot.onrender.com';
+const SELF_URL = 'https://urnisa-dbot-m4im.onrender.com';
 const BACKEND_URL = 'https://urnisa-backend-21ls.onrender.com';
 
 setInterval(() => {
