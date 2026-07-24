@@ -168,6 +168,7 @@ const UserKeySchema = new mongoose.Schema({
     discordId: { type: String, required: true, unique: true },
     lambKeys: { type: Number, default: 0 },
     steakKeys: { type: Number, default: 0 },
+    wagyuKeys: { type: Number, default: 0 },
     lastDailyClaim: { type: Date }, // Added for daily check-in
     updatedAt: { type: Date, default: Date.now }
 });
@@ -176,7 +177,7 @@ const UserKey = mongoose.model('UserKey', UserKeySchema);
 // Redemption Code Schema (UPDATED)
 const RedemptionCodeSchema = new mongoose.Schema({
     code: { type: String, required: true, unique: true },
-    type: { type: String, required: true }, // 'lamb' or 'steak'
+    type: { type: String, required: true }, // 'lamb', 'steak', or 'wagyu'
     keyAmount: { type: Number, default: 1 },
 
     // Usage Logic
@@ -631,7 +632,7 @@ app.post('/api/admin/users/reset-daily', auth, async (req, res) => {
 app.post('/api/admin/codes/generate', auth, async (req, res) => {
     const { type, amount = 1, keyAmount = 1, usageType = 'once_global', hours = 0 } = req.body;
 
-    if (!type || !['lamb', 'steak', 'nisaball'].includes(type)) return res.status(400).json({ error: "Invalid pack type" });
+    if (!type || !['lamb', 'steak', 'wagyu', 'nisaball'].includes(type)) return res.status(400).json({ error: "Invalid pack type" });
 
     try {
         const codes = [];
@@ -721,8 +722,13 @@ app.get('/api/packs', async (req, res) => {
 
     try {
         let wallet = await UserKey.findOne({ discordId });
-        if (!wallet) wallet = { lambKeys: 0, steakKeys: 0 }; // Default
-        res.json(wallet);
+        if (!wallet) {
+            return res.json({ lambKeys: 0, steakKeys: 0, wagyuKeys: 0 });
+        }
+        const walletObj = wallet.toObject ? wallet.toObject() : wallet;
+        walletObj.wagyuKeys = walletObj.wagyuKeys ?? walletObj.steakKeys ?? 0;
+        walletObj.steakKeys = walletObj.steakKeys ?? walletObj.wagyuKeys ?? 0;
+        res.json(walletObj);
     } catch (e) {
         res.status(500).json({ error: "Fetch failed" });
     }
@@ -740,15 +746,31 @@ app.post('/api/packs/use', async (req, res) => {
         if (type === 'lamb') {
             if (wallet.lambKeys < 1) return res.status(403).json({ error: "Not enough keys" });
             wallet.lambKeys -= 1;
-        } else if (type === 'steak') {
-            if (wallet.steakKeys < 1) return res.status(403).json({ error: "Not enough keys" });
-            wallet.steakKeys -= 1;
+        } else if (type === 'steak' || type === 'wagyu') {
+            const hasSteak = wallet.steakKeys || 0;
+            const hasWagyu = wallet.wagyuKeys || 0;
+            if (hasSteak + hasWagyu < 1) return res.status(403).json({ error: "Not enough keys" });
+            
+            // Deduct from both to keep them fully synchronized
+            if (wallet.wagyuKeys && wallet.wagyuKeys >= 1) {
+                wallet.wagyuKeys -= 1;
+            } else {
+                wallet.wagyuKeys = 0;
+            }
+            if (wallet.steakKeys && wallet.steakKeys >= 1) {
+                wallet.steakKeys -= 1;
+            } else {
+                wallet.steakKeys = 0;
+            }
         } else {
             return res.status(400).json({ error: "Invalid pack type" });
         }
 
         await wallet.save();
-        res.json({ success: true, remaining: type === 'lamb' ? wallet.lambKeys : wallet.steakKeys });
+        res.json({ 
+            success: true, 
+            remaining: type === 'lamb' ? wallet.lambKeys : (wallet.wagyuKeys ?? wallet.steakKeys ?? 0) 
+        });
     } catch (e) {
         res.status(500).json({ error: "Transaction failed" });
     }
@@ -882,11 +904,21 @@ app.post('/api/codes/redeem', async (req, res) => {
 
         // Add Pack to User Wallet
         const keysToAdd = codeRecord.keyAmount || 1;
+        const incUpdate = {};
+        if (codeRecord.type === 'lamb') {
+            incUpdate.lambKeys = keysToAdd;
+        } else if (codeRecord.type === 'steak' || codeRecord.type === 'wagyu') {
+            incUpdate.steakKeys = keysToAdd;
+            incUpdate.wagyuKeys = keysToAdd;
+        } else {
+            incUpdate[codeRecord.type] = keysToAdd;
+        }
+
         const wallet = await UserKey.findOneAndUpdate(
             { discordId },
             {
                 $setOnInsert: { discordId },
-                $inc: { [codeRecord.type === 'lamb' ? 'lambKeys' : 'steakKeys']: keysToAdd }
+                $inc: incUpdate
             },
             { upsert: true, new: true }
         );
@@ -906,8 +938,8 @@ app.post('/api/shop/buy', async (req, res) => {
         return res.status(400).json({ error: "Missing required fields: discordId and itemType" });
     }
 
-    if (!['lamb', 'steak'].includes(itemType)) {
-        return res.status(400).json({ error: "Invalid item type. Only 'lamb' and 'steak' packs are purchasable." });
+    if (!['lamb', 'steak', 'wagyu'].includes(itemType)) {
+        return res.status(400).json({ error: "Invalid item type. Only 'lamb' and 'steak'/'wagyu' packs are purchasable." });
     }
 
     const qty = parseInt(quantity) || 1;
@@ -932,12 +964,12 @@ app.post('/api/shop/buy', async (req, res) => {
         }
 
         // 2. Cost calculation
-        const costs = { lamb: 5, steak: 15 };
+        const costs = { lamb: 5, steak: 15, wagyu: 15 };
         const unitCost = costs[itemType];
         const totalCost = unitCost * qty;
 
         if (currentNisaballs < totalCost) {
-            return res.status(400).json({ error: `Insufficient Nisaballs! You need ${totalCost} Nisaballs for ${qty} ${itemType === 'lamb' ? 'Lamb Crate Key' : 'Steak Crate Key'}${qty > 1 ? 's' : ''}, but you only have ${Math.floor(currentNisaballs)}.` });
+            return res.status(400).json({ error: `Insufficient Nisaballs! You need ${totalCost} Nisaballs for ${qty} ${itemType === 'lamb' ? 'Lamb Crate Key' : 'Wagyu Crate Key'}${qty > 1 ? 's' : ''}, but you only have ${Math.floor(currentNisaballs)}.` });
         }
 
         // 3. Deduct Nisaballs on backend
@@ -962,11 +994,19 @@ app.post('/api/shop/buy', async (req, res) => {
         }
 
         // 4. Update the UserKey wallet
+        const incUpdate = {};
+        if (itemType === 'lamb') {
+            incUpdate.lambKeys = qty;
+        } else if (itemType === 'steak' || itemType === 'wagyu') {
+            incUpdate.steakKeys = qty;
+            incUpdate.wagyuKeys = qty;
+        }
+
         const wallet = await UserKey.findOneAndUpdate(
             { discordId },
             {
                 $setOnInsert: { discordId },
-                $inc: { [itemType === 'lamb' ? 'lambKeys' : 'steakKeys']: qty }
+                $inc: incUpdate
             },
             { upsert: true, new: true }
         );
@@ -1042,11 +1082,19 @@ app.post('/api/shop/spin', async (req, res) => {
         }
 
         // 4. Update the UserKey wallet
+        const incUpdate = {};
+        if (itemType === 'lamb') {
+            incUpdate.lambKeys = 1;
+        } else {
+            incUpdate.steakKeys = 1;
+            incUpdate.wagyuKeys = 1;
+        }
+
         const wallet = await UserKey.findOneAndUpdate(
             { discordId },
             {
                 $setOnInsert: { discordId },
-                $inc: { [itemType === 'lamb' ? 'lambKeys' : 'steakKeys']: 1 }
+                $inc: incUpdate
             },
             { upsert: true, new: true }
         );
@@ -1200,7 +1248,7 @@ app.post('/api/inventory/claim', async (req, res) => {
 // --- DEV ENDPOINTS ---
 app.get('/api/dev/packs', (req, res) => {
     // Return infinite packs for testing
-    res.json({ lambKeys: 999, steakKeys: 999 });
+    res.json({ lambKeys: 999, steakKeys: 999, wagyuKeys: 999 });
 });
 
 app.post('/api/dev/packs/use', (req, res) => {
