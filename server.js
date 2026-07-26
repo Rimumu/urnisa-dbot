@@ -38,6 +38,310 @@ const ROLE_FRIEND = '1445655680735383675';
 const WHITELIST_NOTIFY_CHANNEL = '1375823728717467788';
 const GACHA_LOG_CHANNEL = '1382803278449868921';
 
+// --- AUTHENTIC HAT OVERRIDES ---
+const AUTHENTIC_HAT_OVERRIDES = {
+    "amalgalichhat": { name: "Amalgalich", dyeable: false },
+    "angrymask": { name: "Tribal Mask", dyeable: false },
+    "antlers": { name: "Antlers", dyeable: false },
+    "apple": { name: "Apple", dyeable: false },
+    "artsy": { name: "Artsy", dyeable: true },
+    "babydolphin": { name: "Baby Dolphin", dyeable: false },
+    "babyturtle": { name: "Baby Turtle", dyeable: false },
+    "bandana": { name: "Bandana", dyeable: true },
+    "bandanargb": { name: "RGB Bandana", dyeable: false },
+    "baseballeaster": { name: "Easter Baseball Cap", dyeable: true },
+    "baseballhat": { name: "Baseball Cap", dyeable: true },
+    "baseballhatfestive": { name: "Festive Baseball Cap", dyeable: false },
+    "baseballhatjuly": { name: "Summer Baseball Cap", dyeable: false },
+    "baseballhatrgb": { name: "RGB Baseball Cap", dyeable: false },
+    "batwinghat": { name: "Bat Wing Hat", dyeable: false },
+    "beanie": { name: "Beanie", dyeable: true },
+    "beanieeaster": { name: "Easter Beanie", dyeable: true },
+    "beaniefestive": { name: "Festive Beanie", dyeable: false },
+    "beaniejuly": { name: "Summer Beanie", dyeable: false },
+    "beaniergb": { name: "RGB Beanie", dyeable: false },
+    "beaniespooky": { name: "Halloween Beanie", dyeable: false },
+    "beehat": { name: "Bee Hat", dyeable: false },
+    "bicorne": { name: "Bicorne", dyeable: false },
+    "bigbrain": { name: "Big Brain", dyeable: false },
+    "bigcrown": { name: "Big Crown", dyeable: false },
+    "bigeyes": { name: "Big Eyes", dyeable: false },
+    "bigribbon": { name: "Big Ribbon", dyeable: true },
+    "bigstevehead": { name: "Mascot Head", dyeable: false },
+    "bluefireeye": { name: "Skeleton Eye", dyeable: false },
+    "bowler": { name: "Bowler Cap", dyeable: true },
+    "breadhat": { name: "Bread on Head", dyeable: false },
+    "brownbrick": { name: "Brick on Head", dyeable: false },
+    "bunnyhat": { name: "Bunny Hat", dyeable: true },
+    "burgerhat": { name: "Burger", dyeable: false },
+    "caddycap": { name: "Caddy Cap", dyeable: true },
+    "camera": { name: "Camera Head", dyeable: false },
+    "camerabeard": { name: "Camera Beard", dyeable: false },
+    "candleonhead": { name: "Candle", dyeable: false },
+    "candycane": { name: "Candy Cane", dyeable: false },
+    "carrotonstick": { name: "Carrot on a Stick", dyeable: false },
+    "cartoonegg": { name: "Cartoon Egg", dyeable: false },
+    "cheeseslice": { name: "Cheese Slice", dyeable: false },
+    "chefshat": { name: "Chef's Hat", dyeable: false },
+    "chickenhead": { name: "Chicken Head", dyeable: false },
+    "chickenonhead": { name: "Chicken on Head", dyeable: false },
+    "christmascakehat": { name: "Fruit Cake", dyeable: false },
+    "christmastree": { name: "Festive Tree", dyeable: false },
+    "clockface": { name: "Clock Head", dyeable: false },
+    "cowboy": { name: "Cowboy Hat", dyeable: true },
+    "cowboyrgb": { name: "RGB Cowboy Hat", dyeable: false },
+    "crabonhead": { name: "Crab on Head", dyeable: false },
+    "crown": { name: "Crown", dyeable: false },
+    "cuphead": { name: "Cup Head", dyeable: false },
+    "cyclopseye": { name: "Cyclops Eye", dyeable: false },
+    "dairyqueen": { name: "DQ Lips", dyeable: false },
+    "dangereqsue": { name: "Dangeresque Shades", dyeable: false },
+    "dangeresquejuly": { name: "Summer Dangeresque Shades", dyeable: false },
+    "demoneyes": { name: "Demon Eyes", dyeable: false },
+    "demonhorns": { name: "Demon Horns", dyeable: false },
+    "digger": { name: "Diglett", dyeable: false },
+    "dimmahat": { name: "Dimmadome Dimmahat", dyeable: false },
+    "discoball": { name: "Disco", dyeable: false },
+    "disguise": { name: "Disguise", dyeable: false },
+    "doctorhat": { name: "Doctor's Gear", dyeable: false },
+    "dorkglassesandteeth": { name: "Dork", dyeable: false },
+    "doubletake": { name: "Double Take", dyeable: false },
+    "dragonhead": { name: "Dragon Head", dyeable: false },
+    "dragonskull": { name: "Dragon Skull", dyeable: false },
+    "dragonskullender": { name: "Ender Dragon Skull", dyeable: false },
+    "drinkinhat": { name: "Drinking Hat", dyeable: false },
+    "dumhat": { name: "Dum", dyeable: false },
+    "dwarfminerbeard": { name: "Dwarven Miner", dyeable: false },
+    "easterhead": { name: "Easter Island Head", dyeable: false },
+    "egghead": { name: "Egg Head", dyeable: false },
+    "eggonhead": { name: "Egg on Head", dyeable: false },
+    "elfhat": { name: "Elf Hat", dyeable: true },
+    "explorerhat": { name: "Explorer Hat", dyeable: true },
+    "eyepatch": { name: "Eye Patch", dyeable: false },
+    "fakeblight": { name: "Blight", dyeable: false },
+    "fakefire": { name: "Fire", dyeable: false },
+    "farmerbrim": { name: "Farmer Brim", dyeable: true },
+    "festiveantlers": { name: "Festive Antlers", dyeable: false },
+    "festiveribbon": { name: "Festive Ribbon", dyeable: false },
+    "finnhood": { name: "Finn Hood", dyeable: true },
+    "fireworks": { name: "Fireworks", dyeable: false },
+    "fishonhead": { name: "Fish on Head", dyeable: false },
+    "flagjuly": { name: "Summer Flag", dyeable: false },
+    "flies": { name: "Flies", dyeable: false },
+    "floatinghearts": { name: "Floating Hearts", dyeable: false },
+    "floatingstar": { name: "Floating Star", dyeable: false },
+    "flowercrown": { name: "Flower Crown", dyeable: false },
+    "floweronhead": { name: "Flower Head", dyeable: false },
+    "foxhat": { name: "Fox Hat", dyeable: false },
+    "fro": { name: "Fro", dyeable: true },
+    "frozenhead": { name: "Frozen Head", dyeable: false },
+    "fullironhelm": { name: "Armor Helm", dyeable: false },
+    "ghostmask": { name: "Ghost Head", dyeable: false },
+    "goggles": { name: "Goggles", dyeable: true },
+    "grandmadisguise": { name: "Grandma Disguise", dyeable: false },
+    "greenbirb": { name: "Green Birb", dyeable: false },
+    "grinchhat": { name: "Grinch Mask", dyeable: false },
+    "halo": { name: "Halo", dyeable: false },
+    "headbolts": { name: "Head Bolts", dyeable: false },
+    "headphonesblue": { name: "Headphones", dyeable: true },
+    "headshot": { name: "Headshot", dyeable: false },
+    "hockeymask": { name: "Hockey Mask", dyeable: false },
+    "holyhead": { name: "Holy Head", dyeable: false },
+    "horsemask": { name: "Horse Head", dyeable: false },
+    "hosthat": { name: "Host", dyeable: false },
+    "icedragonskull": { name: "Ice Dragon Skull", dyeable: false },
+    "jackohat": { name: "Jack-o-Lantern Hat", dyeable: false },
+    "jesterhat": { name: "Jester", dyeable: true },
+    "julydouble": { name: "Summer Gear", dyeable: false },
+    "kirbymouthful": { name: "Mouthful", dyeable: false },
+    "largehorns": { name: "Large Horns", dyeable: false },
+    "lilbow": { name: "Lil' Bow", dyeable: true },
+    "madscientist": { name: "Wily Head", dyeable: false },
+    "magikarp": { name: "Magikarp", dyeable: false },
+    "megamanhat": { name: "Megaman Head", dyeable: false },
+    "mistletoe": { name: "Mistletoe", dyeable: false },
+    "mohawk": { name: "Mohawk", dyeable: true },
+    "monkeyking": { name: "Monkey King", dyeable: false },
+    "monocle": { name: "Monocle", dyeable: false },
+    "moreeyes": { name: "Eye Head", dyeable: false },
+    "murdered": { name: "Murdered", dyeable: false },
+    "nekoears": { name: "Neko Ears", dyeable: true },
+    "palmtree": { name: "Palm Tree", dyeable: false },
+    "paperbag": { name: "Paper Bag", dyeable: false },
+    "partyhat": { name: "Party Hat", dyeable: true },
+    "paypay": { name: "Paypay", dyeable: false },
+    "penguinbaby": { name: "Baby Penguin", dyeable: false },
+    "penguinhat": { name: "Penguin Hat", dyeable: false },
+    "pighead": { name: "Pig Head", dyeable: false },
+    "pinhead": { name: "Pin Head", dyeable: false },
+    "plaguedoctor": { name: "Plague Doctor", dyeable: false },
+    "pog": { name: "Poggers", dyeable: false },
+    "pohatoe": { name: "Pohatoe", dyeable: false },
+    "policebucket": { name: "Police Bucket", dyeable: true },
+    "policesiren": { name: "Siren", dyeable: false },
+    "poofballhat": { name: "Poofball", dyeable: true },
+    "poofballrgb": { name: "RGB Poofball", dyeable: false },
+    "popehat": { name: "Pope Hat", dyeable: false },
+    "potionhead": { name: "Potion Head", dyeable: false },
+    "presentsstack": { name: "Presents", dyeable: false },
+    "propelhat": { name: "Propeller", dyeable: true },
+    "questbook": { name: "Questbook Hat", dyeable: false },
+    "rabbitears": { name: "Bunny Ears", dyeable: true },
+    "rabbitonhead": { name: "Bunny on Head", dyeable: false },
+    "rainboworbiters": { name: "Rainbow Orbiters", dyeable: false },
+    "ranahat": { name: "Rana Cap", dyeable: true },
+    "redeyes": { name: "Red Eyes", dyeable: false },
+    "rednose": { name: "Red Nose", dyeable: false },
+    "redstache": { name: "Plumber Stache", dyeable: false },
+    "rgbbigribbon": { name: "RGB Big Ribbon", dyeable: false },
+    "rgbbowler": { name: "RGB Bowler Cap", dyeable: false },
+    "rgbdragonskull": { name: "RGB Dragon Skull", dyeable: false },
+    "rgbdrinkinhat": { name: "RGB Drinking Hat", dyeable: false },
+    "rgbeasterhead": { name: "RGB Easter Island Head", dyeable: false },
+    "rgbfullhelm": { name: "RGB Armor Helm", dyeable: false },
+    "rgbpartyhat": { name: "RGB Party Hat", dyeable: false },
+    "rgbsmallbowler": { name: "RGB Small Bowler Cap", dyeable: false },
+    "rgbsunglasses": { name: "RGB Sunglasses", dyeable: false },
+    "rgbtoptophathat": { name: "RGB Toptop Hathat", dyeable: false },
+    "rgbushanka": { name: "RGB Ushanka", dyeable: false },
+    "rock": { name: "Rock Eye", dyeable: false },
+    "rubbernipple": { name: "Baby Bottle Head", dyeable: false },
+    "sandcastle": { name: "Sand Castle", dyeable: false },
+    "santaclaus": { name: "Santa Claus", dyeable: false },
+    "sausage": { name: "Sausage", dyeable: false },
+    "seaweedhat": { name: "Seaweed Hat", dyeable: false },
+    "shakehat": { name: "Shake Head", dyeable: false },
+    "sheep": { name: "Sheep Head", dyeable: false },
+    "shrekears": { name: "Shrek Ears", dyeable: false },
+    "shroomcap": { name: "Shroom Cap", dyeable: true },
+    "smokingpipe": { name: "Smoking Pipe", dyeable: false },
+    "snowmanbaby": { name: "Baby Snowman", dyeable: false },
+    "sombrero": { name: "Sombrero", dyeable: true },
+    "sonichood": { name: "Sonic Head", dyeable: false },
+    "spadesoldier": { name: "Spade Soldier", dyeable: false },
+    "spiderweb": { name: "Web Head", dyeable: false },
+    "springer": { name: "Springer", dyeable: false },
+    "sprout": { name: "Sprout", dyeable: false },
+    "spyzombie": { name: "Spy Zombie", dyeable: false },
+    "stackofeggs": { name: "Egg Stack", dyeable: false },
+    "stress": { name: "Stress", dyeable: false },
+    "summerhat": { name: "Summer Hat", dyeable: true },
+    "sunglasses": { name: "Sunglasses", dyeable: false },
+    "sunglassesbig": { name: "Big Sunglasses", dyeable: false },
+    "supersandhat": { name: "Saiyan Head", dyeable: false },
+    "swimmer": { name: "Swimmer Cap", dyeable: true },
+    "tinkerhat": { name: "Tinker's Helm", dyeable: false },
+    "topcathat": { name: "Top Cat Hat", dyeable: false },
+    "tophat": { name: "Top Hat", dyeable: true },
+    "toptophathat": { name: "Toptop Hathat", dyeable: false },
+    "triangleshades": { name: "Angled Shades", dyeable: false },
+    "tricorne": { name: "Tricorne", dyeable: false },
+    "tvhead": { name: "TV Head", dyeable: false },
+    "unicornhorn": { name: "Unicorn Horn", dyeable: false },
+    "ushanka": { name: "Ushanka", dyeable: true },
+    "vikinghatbeard": { name: "Viking Helm", dyeable: false },
+    "villagernose": { name: "Villager Nose", dyeable: false },
+    "winghat": { name: "Wing Cap", dyeable: false },
+    "zigzagwitchhat": { name: "Witch Hat", dyeable: true },
+    "acornhat": { name: "Acorn Cap", dyeable: true },
+    "aegishat": { name: "Aegis", dyeable: false },
+    "alienphil": { name: "Phil?", dyeable: false },
+    "simsgem": { name: "Plumbob", dyeable: false },
+    "artsy_doll": { name: "Artsy Doll", dyeable: false },
+    "azumanga_hat": { name: "Azumanga's Hat", dyeable: false },
+    "beret_ribbon": { name: "Beret Ribbon", dyeable: true },
+    "bucket": { name: "Bucket", dyeable: true },
+    "burning_m_bison": { name: "Burning Flames Team Captain", dyeable: false },
+    "chalk_stick": { name: "Chalk Stick", dyeable: false },
+    "chi_ears": { name: "Chi's Ears", dyeable: false },
+    "circular_glasses": { name: "Circular Glasses", dyeable: false },
+    "cucumbereyemask": { name: "Cucumber Eye Mask", dyeable: false },
+    "dejiko": { name: "Dejiko's Hat", dyeable: false },
+    "fez": { name: "Fez", dyeable: true },
+    "fishing_hat": { name: "Fishing Hat", dyeable: true },
+    "lightning_eyes": { name: "Lightning Eyes", dyeable: false },
+    "longfoxears": { name: "Long Fox Ears", dyeable: false },
+    "milady_doll": { name: "Milady Doll", dyeable: false },
+    "nyan_doll": { name: "Nyan Doll", dyeable: false },
+    "orange_hat": { name: "Orange Hat", dyeable: true },
+    "peppino": { name: "Peppino", dyeable: false },
+    "pom_moog": { name: "Pom-Moog", dyeable: false },
+    "puchiko": { name: "Puchiko's Hat", dyeable: false },
+    "rabi_en_rose": { name: "Rabi~en~Rose's Hat", dyeable: false },
+    "raincloud": { name: "Raincloud", dyeable: false },
+    "scouter": { name: "Scouter", dyeable: false },
+    "sleepeyemask": { name: "Sleep Eye Mask", dyeable: false },
+    "sport_sunglasses": { name: "Sport Sunglasses", dyeable: false },
+    "strawberry_hat": { name: "Strawberry Hat", dyeable: false },
+    "teddy_bear": { name: "Teddy Bear", dyeable: false },
+    "the_noise": { name: "The Noise", dyeable: false },
+    "toy_story_alien": { name: "Toy Story Alien", dyeable: false },
+    "twilight_doll": { name: "Twilight Doll", dyeable: false },
+    "worms_mine": { name: "Worm's Mine", dyeable: false },
+    "alien_antennae": { name: "Alien Antennae", dyeable: false },
+    "angel_and_devil": { name: "Angel and Devil", dyeable: false },
+    "astronaut": { name: "Astronaut", dyeable: false },
+    "axolotl_on_head": { name: "Axolotl Friend", dyeable: true },
+    "baby_crewmate": { name: "Baby Crewmate", dyeable: true },
+    "bee_on_head": { name: "Bee Friend", dyeable: false },
+    "beetle_on_head": { name: "Beetle Friend", dyeable: false },
+    "binky": { name: "Binky", dyeable: true },
+    "cardboard_box": { name: "Cardboard Box", dyeable: false },
+    "cat_hat": { name: "Cat Hat", dyeable: true },
+    "cat_on_head": { name: "Cat Friend", dyeable: true },
+    "caterpillar_on_head": { name: "Caterpillar Friend", dyeable: false },
+    "chocolate_sauced": { name: "Chocolate Sauced", dyeable: false },
+    "crystal_horns": { name: "Crystal Horns", dyeable: false },
+    "dipper": { name: "Dipper", dyeable: false },
+    "druid_antlers": { name: "Druid Antlers", dyeable: false },
+    "druid_antlers_rare": { name: "Elder Druid Antlers", dyeable: false },
+    "eevee_ears": { name: "Eevee Ears", dyeable: false },
+    "eyeholder_beeholder": { name: "Beeholder", dyeable: false },
+    "eyeholder_dark": { name: "Dark Eyeholder", dyeable: false },
+    "eyeholder_evil": { name: "Evil Eyeholder", dyeable: false },
+    "eyeholder_warm": { name: "Warm Eyeholder", dyeable: false },
+    "eyeholder_xanath": { name: "Xanath Eyeholder", dyeable: false },
+    "gnome": { name: "Gnome Hat", dyeable: true },
+    "gnome_clover_wig": { name: "Gnome Disguise", dyeable: false },
+    "greaser": { name: "Greaser", dyeable: false },
+    "hat_of_discipline": { name: "Hat of Discipline", dyeable: false },
+    "ladybug_on_head": { name: "Ladybug Friend", dyeable: false },
+    "lil_bows": { name: "Lil' Bows", dyeable: true },
+    "lil_termagant": { name: "Lil' Termagant", dyeable: false },
+    "medusa": { name: "Medusa", dyeable: false },
+    "mimic_head": { name: "Mimic", dyeable: false },
+    "mimic_head_dark": { name: "Dark Mimic", dyeable: false },
+    "mimic_head_gold": { name: "Gold Mimic", dyeable: false },
+    "mindflayer": { name: "Mindflayer", dyeable: false },
+    "mindflayer_alhoon": { name: "Alhoon", dyeable: false },
+    "octodad": { name: "Octodad", dyeable: false },
+    "pika_ears": { name: "Pika Ears", dyeable: false },
+    "right_hand_hat": { name: "Right Hand", dyeable: false },
+    "round_purple_wig": { name: "Purple Wig", dyeable: false },
+    "round_red_wig": { name: "Red Wig", dyeable: false },
+    "slime_cube_dnd": { name: "Dungeon Slime Cube", dyeable: false },
+    "slime_head": { name: "Slime Head", dyeable: false },
+    "stinkycheeseman": { name: "Stinky Cheese Man", dyeable: false },
+    "stuck_lollipop": { name: "Stuck Lollipop", dyeable: false },
+    "tanuki_leaf": { name: "Tanuki Leaf", dyeable: false },
+    "the_noisier": { name: "The Noisier", dyeable: false },
+    "thumbnail": { name: "Youtube Thumbnail", dyeable: false },
+    "tick_on_head": { name: "Tick Friend", dyeable: false },
+    "toast": { name: "Toast", dyeable: false },
+    "toilet": { name: "Toilet Head", dyeable: false },
+    "tomato_splats": { name: "Tomato Splats", dyeable: false },
+    "traffic_cone": { name: "Traffic Cone", dyeable: false },
+    "udder_hat": { name: "Udder Hat", dyeable: false },
+    "worm_hat": { name: "Worm Hat", dyeable: false },
+    "frog_on_head": { name: "Frog Friend", dyeable: true },
+    "parrot_on_head": { name: "Parrot Friend", dyeable: true },
+    "bunny": { name: "Bunny Ears", dyeable: true },
+    "beret": { name: "Beret", dyeable: true },
+    "headphones": { name: "Headphones", dyeable: true },
+    "cap": { name: "Cap", dyeable: true },
+    "fedora": { name: "Fedora", dyeable: true }
+};
+
 // --- ITEM MAPPING ---
 // Map Gacha Item Names to RCON Commands / Minecraft IDs
 const ITEM_MAP = {
@@ -1396,15 +1700,53 @@ app.post('/api/inventory/claim', async (req, res) => {
                 itemName = match[2];
             }
 
-            const mappedId = ITEM_MAP[itemName];
-            if (mappedId) {
-                command = `give ${player} ${mappedId} ${count}`;
-            } else if (item.itemId && (item.itemId.startsWith('hat-') || item.type?.toLowerCase() === 'hat')) {
-                const cleanHatId = item.itemId.replace(/^hat-/, '');
-                command = `give ${player} simplehats:${cleanHatId} 1`;
+            // Check if the item is a hat
+            let isHat = false;
+            let hatId = null;
+
+            // Try to find the hat ID using AUTHENTIC_HAT_OVERRIDES
+            const cleanItemId = item.itemId ? item.itemId.replace(/^hat-/, '').toLowerCase() : '';
+            const cleanName = itemName.toLowerCase().replace(/\s+/g, '').replace(/hat$/, '');
+
+            if (AUTHENTIC_HAT_OVERRIDES[cleanItemId]) {
+                isHat = true;
+                hatId = cleanItemId;
+            } else if (AUTHENTIC_HAT_OVERRIDES[itemName.toLowerCase()]) {
+                isHat = true;
+                hatId = itemName.toLowerCase();
+            } else if (AUTHENTIC_HAT_OVERRIDES[cleanName]) {
+                isHat = true;
+                hatId = cleanName;
+            } else if (AUTHENTIC_HAT_OVERRIDES[cleanName + 'hat']) {
+                isHat = true;
+                hatId = cleanName + 'hat';
             } else {
-                console.error(`❌ Unknown item mapping: ${itemName}`);
-                return res.status(500).json({ error: "Item ID map missing. Contact Admin." });
+                // Search display names
+                for (const [key, val] of Object.entries(AUTHENTIC_HAT_OVERRIDES)) {
+                    if (val.name.toLowerCase() === itemName.toLowerCase() || val.name.toLowerCase() === cleanName) {
+                        isHat = true;
+                        hatId = key;
+                        break;
+                    }
+                }
+            }
+
+            if (!isHat && (item.type?.toLowerCase() === 'hat' || (item.itemId && item.itemId.startsWith('hat-')))) {
+                // If it's explicitly typed as a hat, but not found in overrides, fall back to clean ID
+                isHat = true;
+                hatId = cleanItemId || cleanName;
+            }
+
+            if (isHat && hatId) {
+                command = `give ${player} simplehats:${hatId} 1`;
+            } else {
+                const mappedId = ITEM_MAP[itemName];
+                if (mappedId) {
+                    command = `give ${player} ${mappedId} ${count}`;
+                } else {
+                    console.error(`❌ Unknown item mapping: ${itemName}`);
+                    return res.status(500).json({ error: "Item ID map missing. Contact Admin." });
+                }
             }
         }
 
