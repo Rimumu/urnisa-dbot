@@ -1274,10 +1274,119 @@ app.post('/api/inventory/claim', async (req, res) => {
 
         // 3. Construct Command
         let command = "";
+        const itemNameLower = item.name.toLowerCase();
 
         if (item.type === 'Pokemon') {
             command = `pokegiveother ${player} ${item.name.replace(/\s+/g, '').toLowerCase()} level=5`; // Giving at lvl 5 is safe default
+        } else if (itemNameLower.includes('mew ex tcg card') || item.itemId === '40051') {
+            command = `give ${player} cobbletcg:mew151/cards/mew151 1`;
+        } else if (itemNameLower.includes('tcg pack') || itemNameLower.includes('booster pack') || item.itemId.startsWith('tcg-') || item.itemId === '40001' || item.itemId === '40050') {
+            // TCG Pack
+            let packPath = 'baseset/sealed_baseset'; // default fallback
+            if (itemNameLower.includes('silver tempest') || item.itemId === 'tcg-13') {
+                packPath = 'silvertempest/sealed_silvertempest';
+            } else if (itemNameLower.includes('paldea evolved') || item.itemId === 'tcg-15') {
+                packPath = 'paldeanevolved/sealed_paldeanevolved';
+            } else if (itemNameLower.includes('prismatic evolutions') || item.itemId === 'tcg-21') {
+                packPath = 'prismaticevolutions/sealed_prismaticevolution';
+            } else if (itemNameLower.includes('ascended') || item.itemId === 'tcg-28') {
+                packPath = 'ascended/sealed_ascended';
+            } else if (itemNameLower.includes('astral radiance') || item.itemId === 'tcg-11') {
+                packPath = 'aradiance/sealed_aradiance';
+            } else if (itemNameLower.includes('base set') || item.itemId === 'tcg-1' || item.itemId === '40001') {
+                packPath = 'baseset/sealed_baseset';
+            } else if (itemNameLower.includes('brilliant stars') || item.itemId === 'tcg-10') {
+                packPath = 'bstars/sealed_bstars';
+            } else if (itemNameLower.includes('crown zenith') || item.itemId === 'tcg-14') {
+                packPath = 'czenith/sealed_czenith';
+            } else if (itemNameLower.includes('destined rivals') || item.itemId === 'tcg-23') {
+                packPath = 'drivals/sealed_drivals';
+            } else if (itemNameLower.includes('evolving skies') || item.itemId === 'tcg-9') {
+                packPath = 'eskies/sealed_eskies';
+            } else if (itemNameLower.includes('lost origin') || item.itemId === 'tcg-12') {
+                packPath = 'lorigin/sealed_lorigin';
+            } else if (itemNameLower.includes('phantasmal') || item.itemId === 'tcg-27') {
+                packPath = 'pflames/sealed_pflames';
+            } else if (itemNameLower.includes('roaring skies') || item.itemId === 'tcg-4') {
+                packPath = 'rskies/sealed_rskies';
+            } else if (itemNameLower.includes('team up') || item.itemId === 'tcg-5') {
+                packPath = 'teamup/sealed_teamup';
+            } else if (itemNameLower.includes('team rocket') || item.itemId === 'tcg-2') {
+                packPath = 'trocket/sealed_trocket';
+            } else if (itemNameLower.includes('surging sparks') || item.itemId === 'tcg-20') {
+                packPath = 'ssparks/sealed_ssparks';
+            } else if (itemNameLower.includes('unified minds') || item.itemId === 'tcg-7') {
+                packPath = 'uminds/sealed_uminds';
+            } else if (itemNameLower.includes('gym challenge') || item.itemId === 'tcg-3') {
+                packPath = 'gchallange/sealed_gchallange';
+            } else if (itemNameLower.includes('hidden fates') || item.itemId === 'tcg-8') {
+                packPath = 'hfates/sealed_hfates';
+            } else if (itemNameLower.includes('paldean fates') || item.itemId === 'tcg-18') {
+                packPath = 'pfates/sealed_pfates';
+            } else if (itemNameLower.includes('unbroken bounds') || item.itemId === 'tcg-6') {
+                packPath = 'ubounds/sealed_ubounds';
+            } else if (itemNameLower.includes('paradox rift') || item.itemId === 'tcg-17') {
+                packPath = 'prift/sealed_prift';
+            } else if (itemNameLower.includes('temporal forces') || item.itemId === 'tcg-19') {
+                packPath = 'tforces/sealed_tforces';
+            } else if (itemNameLower.includes('journey together') || item.itemId === 'tcg-22') {
+                packPath = 'jtogether/sealed_jtogether';
+            } else if (itemNameLower.includes('black bolt') || item.itemId === 'tcg-24') {
+                packPath = 'bbolt/sealed_bbolt';
+            } else if (itemNameLower.includes('white flare') || item.itemId === 'tcg-25') {
+                packPath = 'wflare/sealed_wflare';
+            } else if (itemNameLower.includes('mega evolution') || item.itemId === 'tcg-26') {
+                packPath = 'mevolution/sealed_mevolution';
+            } else if (itemNameLower.includes('mew 151') || item.itemId === 'tcg-16' || item.itemId === '40050') {
+                packPath = 'mew151/sealed_mew151';
+            }
+            command = `give ${player} cobbletcg:${packPath} 1`;
+        } else if (itemNameLower.includes('loot ball') || itemNameLower.includes('lootball')) {
+            // Loot Balls mapping
+            let lootBallNbt = 'poke';
+            let variant = 'poke';
+            let texture = 'cobblemon:textures/poke_balls/poke_ball.png';
+
+            if (itemNameLower.includes('uncommon') || item.itemId === '40011') {
+                lootBallNbt = 'great';
+                variant = 'great';
+                texture = 'cobblemon:textures/poke_balls/great_ball.png';
+            } else if (itemNameLower.includes('ultra rare') || itemNameLower.includes('ultra-rare') || item.itemId === '40061') {
+                lootBallNbt = 'master';
+                variant = 'master';
+                texture = 'cobblemon:textures/poke_balls/master_ball.png';
+            } else if (itemNameLower.includes('rare') || item.itemId === '40060') {
+                lootBallNbt = 'ultra';
+                variant = 'ultra';
+                texture = 'cobblemon:textures/poke_balls/ultra_ball.png';
+            }
+
+            command = `give ${player} cobbleloots:loot_ball[minecraft:custom_data={LootBallData:"cobbleloots:loot_ball/${lootBallNbt}",Variant:"${variant}",Texture:"${texture}"}] 1`;
+        } else if (itemNameLower.includes('cobbledollar')) {
+            // Cobbledollars mapping
+            const dollarsMatch = item.name.match(/\d+/);
+            const amount = dollarsMatch ? dollarsMatch[0] : '50';
+            command = `cobbledollars give ${player} ${amount}`;
+        } else if (itemNameLower.includes('relic coin')) {
+            // Relic Coins mapping
+            const relicMatch = item.name.match(/^(\d+)x/);
+            const count = relicMatch ? parseInt(relicMatch[1]) : 1;
+            command = `give ${player} cobblemon:relic_coin ${count}`;
+        } else if (itemNameLower.includes('koban coin')) {
+            // Koban Coins mapping
+            const kobanMatch = item.name.match(/^(\d+)x/);
+            const count = kobanMatch ? parseInt(kobanMatch[1]) : 1;
+            command = `give ${player} cobbledgacha:koban_coin ${count}`;
+        } else if (itemNameLower.includes('hat bag')) {
+            // Hat Bag
+            let bagId = 'simplehats:hatbag_common';
+            if (itemNameLower.includes('uncommon')) bagId = 'simplehats:hatbag_uncommon';
+            else if (itemNameLower.includes('rare')) bagId = 'simplehats:hatbag_rare';
+            else if (itemNameLower.includes('epic')) bagId = 'simplehats:hatbag_epic';
+            else if (itemNameLower.includes('summer')) bagId = 'simplehats:hatbag_summer';
+            command = `give ${player} ${bagId} 1`;
         } else {
+            // Existing ITEM_MAP or hats fallback
             let count = 1;
             let itemName = item.name;
 
@@ -1288,12 +1397,15 @@ app.post('/api/inventory/claim', async (req, res) => {
             }
 
             const mappedId = ITEM_MAP[itemName];
-            if (!mappedId) {
+            if (mappedId) {
+                command = `give ${player} ${mappedId} ${count}`;
+            } else if (item.itemId && (item.itemId.startsWith('hat-') || item.type?.toLowerCase() === 'hat')) {
+                const cleanHatId = item.itemId.replace(/^hat-/, '');
+                command = `give ${player} simplehats:${cleanHatId} 1`;
+            } else {
                 console.error(`❌ Unknown item mapping: ${itemName}`);
                 return res.status(500).json({ error: "Item ID map missing. Contact Admin." });
             }
-
-            command = `give ${player} ${mappedId} ${count}`;
         }
 
         console.log(`🚀 Executing Claim: ${command}`);
