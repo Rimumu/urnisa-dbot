@@ -1483,9 +1483,10 @@ app.post('/api/daily/claim', async (req, res) => {
         const now = new Date();
         if (wallet.lastDailyClaim) {
             const lastClaim = new Date(wallet.lastDailyClaim);
-            // reset at midnight UTC or 24 hours
-            if (now.getTime() - lastClaim.getTime() < 24 * 60 * 60 * 1000) {
-                return res.status(400).json({ error: "Already claimed today." });
+            const diff = now.getTime() - lastClaim.getTime();
+            const cooldown = 24 * 60 * 60 * 1000;
+            if (diff < cooldown) {
+                return res.status(403).json({ success: false, error: "Already claimed today.", remainingMs: cooldown - diff });
             }
         }
         wallet.lambKeys += 1; // Or whatever daily reward
