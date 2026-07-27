@@ -1117,14 +1117,22 @@ app.post('/api/packs/use', async (req, res) => {
             if (wallet.lambKeys < amount) return res.status(400).json({ error: "Not enough Lamb Keys." });
             wallet.lambKeys -= amount;
             remaining = wallet.lambKeys;
-        } else if (actualPackType === 'steak') {
-            if (wallet.steakKeys < amount) return res.status(400).json({ error: "Not enough Steak Keys." });
-            wallet.steakKeys -= amount;
-            remaining = wallet.steakKeys;
-        } else if (actualPackType === 'wagyu') {
-            if (wallet.wagyuKeys < amount) return res.status(400).json({ error: "Not enough Wagyu Keys." });
-            wallet.wagyuKeys -= amount;
-            remaining = wallet.wagyuKeys;
+        } else if (actualPackType === 'steak' || actualPackType === 'wagyu') {
+            const hasSteak = wallet.steakKeys || 0;
+            const hasWagyu = wallet.wagyuKeys || 0;
+            if (hasSteak + hasWagyu < amount) return res.status(400).json({ error: "Not enough keys." });
+
+            if (wallet.wagyuKeys && wallet.wagyuKeys >= amount) {
+                wallet.wagyuKeys -= amount;
+            } else {
+                wallet.wagyuKeys = 0;
+            }
+            if (wallet.steakKeys && wallet.steakKeys >= amount) {
+                wallet.steakKeys -= amount;
+            } else {
+                wallet.steakKeys = 0;
+            }
+            remaining = wallet.wagyuKeys ?? wallet.steakKeys ?? 0;
         } else {
             return res.status(400).json({ error: "Invalid pack type." });
         }
@@ -1154,115 +1162,232 @@ app.get('/api/inventory', async (req, res) => {
     }
 });
 
-// Helper to generate the exact RCON command for giving items in Minecraft
-const getItemRconCommand = (username, item) => {
-    const itemName = item.name || '';
-    const itemId = item.itemId || '';
-    const itemType = item.type || 'Item';
-
-    // 1. Pokemon
-    if (itemType === 'Pokemon' || itemType === 'pokemon') {
-        const cleanName = itemName.toLowerCase().replace(/\s+/g, '');
-        return `pokegive ${username} ${cleanName}`;
-    }
-
-    // 2. Mapped items from ITEM_MAP
-    if (ITEM_MAP[itemName]) {
-        const mapped = ITEM_MAP[itemName];
-        if (mapped.startsWith('give ') || mapped.startsWith('pokegive ')) {
-            return mapped.replace('{user}', username);
-        }
-        return `give ${username} ${mapped} 1`;
-    }
-
-    // 3. Hats & Cosmetics
-    if (itemType === 'Hat' || itemType === 'hat' || (typeof ALL_HATS !== 'undefined' && (ALL_HATS[itemId] || ALL_HATS[itemName]))) {
-        const hatId = itemId || itemName;
-        return `give ${username} simplehats:${hatId} 1`;
-    }
-
-    // 4. Items with explicit namespace (cobblemon:, numismatic-overhaul:, minecraft:, simplehats:, etc.)
-    if (itemId.includes(':')) {
-        return `give ${username} ${itemId} 1`;
-    }
-
-    // 5. TCG Booster Packs
-    if (itemId.startsWith('tcg-') || itemType === 'TCG' || itemName.toLowerCase().includes('pack')) {
-        const safeName = itemName.replace(/["'\\]/g, '');
-        return `give ${username} paper[custom_name='{"text":"${safeName}","color":"gold","bold":true}',lore=['{"text":"TCG Booster Pack - Redeem with Rimu!","color":"yellow"}']] 1`;
-    }
-
-    // 6. Generic item fallback
-    const cleanId = (itemId || itemName).toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    return `give ${username} minecraft:${cleanId} 1`;
-};
-
 app.post('/api/inventory/claim', async (req, res) => {
     const { discordId, itemIds, dbItemId } = req.body;
+    if (!discordId) return res.status(400).json({ error: "Missing Discord ID" });
+
+    const targetIds = Array.isArray(itemIds) ? itemIds : (dbItemId ? [dbItemId] : []);
+    if (targetIds.length === 0) return res.status(400).json({ error: "No items specified." });
+
     try {
         const link = await MinecraftLink.findOne({ discordId });
-        if (!link) return res.status(400).json({ error: "No Minecraft account linked." });
-
-        const targetIds = Array.isArray(itemIds) ? itemIds : (dbItemId ? [dbItemId] : []);
-        if (targetIds.length === 0) return res.status(400).json({ error: "No items specified." });
+        if (!link || !link.minecraftUsername) return res.status(400).json({ error: "No Minecraft account linked!" });
 
         const items = await InventoryItem.find({ _id: { $in: targetIds }, discordId, claimed: false });
         if (items.length === 0) return res.status(400).json({ error: "No unclaimed items found." });
 
-        // 1. Check if user is online in Minecraft server via RCON
-        const listRes = await sendRconCommand('list');
-        if (listRes === false) {
-            return res.status(500).json({ error: "Cannot connect to Minecraft server via RCON. Is the server online?" });
-        }
-        if (typeof listRes === 'string' && !listRes.includes("Simulation")) {
-            const escapedUsername = link.minecraftUsername.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\app.post('/api/inventory/claim', async (req, res) => {
-    const { discordId, itemIds, dbItemId } = req.body;
-    try {
-        const link = await MinecraftLink.findOne({ discordId });
-        if (!link) return res.status(400).json({ error: "No Minecraft account linked." });
+        const player = link.minecraftUsername;
 
-        const targetIds = Array.isArray(itemIds) ? itemIds : (dbItemId ? [dbItemId] : []);
-        if (targetIds.length === 0) return res.status(400).json({ error: "No items specified." });
+        // Check online status via RCON "list"
+        const listResponse = await sendRconCommand("list");
 
-        const items = await InventoryItem.find({ _id: { $in: targetIds }, discordId, claimed: false });
-        if (items.length === 0) return res.status(400).json({ error: "No unclaimed items found." });
-
-        // Try to give items
-        for (const item of items) {
-            let cmd = `/give ${link.minecraftUsername} ${item.itemId} 1`;
-            if (item.type === 'Pokemon') cmd = `/pokegive ${link.minecraftUsername} ${item.name}`;
-            await sendRconCommand(cmd);
-            item.claimed = true;
-            item.claimedAt = new Date();
-            await item.save();
+        if (listResponse === false) {
+            return res.status(502).json({ error: "Could not connect to Minecraft Server." });
         }
 
-        res.json({ success: true, claimedCount: items.length });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});');
-            const onlineRegex = new RegExp(`\\b${escapedUsername}\\b`, 'i');
-            if (!onlineRegex.test(listRes)) {
-                return res.status(400).json({ error: "Claim Failed: You must be online in-game to claim items!" });
+        const lowerList = (listResponse || '').toLowerCase();
+        const lowerPlayer = player.toLowerCase();
+
+        let isOnline = false;
+
+        if (lowerList.includes(lowerPlayer)) {
+            const safePlayer = lowerPlayer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`\\b${safePlayer}\\b`);
+            if (regex.test(lowerList)) {
+                isOnline = true;
             }
         }
 
-        // 2. Execute RCON give commands
-        for (const item of items) {
-            const cmd = getItemRconCommand(link.minecraftUsername, item);
-            console.log(`🎁 [CLAIM RCON] Executing for ${link.minecraftUsername}: ${cmd}`);
-            const result = await sendRconCommand(cmd);
-            if (result === false) {
-                return res.status(500).json({ error: `Failed to deliver item ${item.name} via RCON.` });
-            }
-            item.claimed = true;
-            item.claimedAt = new Date();
-            await item.save();
+        if ((listResponse || '').includes("Simulation")) isOnline = true;
+
+        if (!isOnline) {
+            return res.status(409).json({ error: "You must be online in-game to claim items!" });
         }
 
-        res.json({ success: true, claimedCount: items.length });
+        let claimedCount = 0;
+
+        for (const item of items) {
+            let command = "";
+            const itemNameLower = item.name.toLowerCase();
+
+            if (item.type === 'Pokemon') {
+                command = `pokegiveother ${player} ${item.name.replace(/\s+/g, '').toLowerCase()} level=5`;
+            } else if (itemNameLower.includes('mew ex tcg card') || item.itemId === '40051') {
+                command = `give ${player} cobbletcg:mew151/cards/mew151 1`;
+            } else if (itemNameLower.includes('tcg pack') || itemNameLower.includes('booster pack') || item.itemId.startsWith('tcg-') || item.itemId === '40001' || item.itemId === '40050') {
+                let packPath = 'baseset/sealed_baseset';
+                if (itemNameLower.includes('silver tempest') || item.itemId === 'tcg-13') {
+                    packPath = 'silvertempest/sealed_silvertempest';
+                } else if (itemNameLower.includes('paldea evolved') || item.itemId === 'tcg-15') {
+                    packPath = 'paldeanevolved/sealed_paldeanevolved';
+                } else if (itemNameLower.includes('prismatic evolutions') || item.itemId === 'tcg-21') {
+                    packPath = 'prismaticevolutions/sealed_prismaticevolution';
+                } else if (itemNameLower.includes('ascended') || item.itemId === 'tcg-28') {
+                    packPath = 'ascended/sealed_ascended';
+                } else if (itemNameLower.includes('astral radiance') || item.itemId === 'tcg-11') {
+                    packPath = 'aradiance/sealed_aradiance';
+                } else if (itemNameLower.includes('base set') || item.itemId === 'tcg-1' || item.itemId === '40001') {
+                    packPath = 'baseset/sealed_baseset';
+                } else if (itemNameLower.includes('brilliant stars') || item.itemId === 'tcg-10') {
+                    packPath = 'bstars/sealed_bstars';
+                } else if (itemNameLower.includes('crown zenith') || item.itemId === 'tcg-14') {
+                    packPath = 'czenith/sealed_czenith';
+                } else if (itemNameLower.includes('destined rivals') || item.itemId === 'tcg-23') {
+                    packPath = 'drivals/sealed_drivals';
+                } else if (itemNameLower.includes('evolving skies') || item.itemId === 'tcg-9') {
+                    packPath = 'eskies/sealed_eskies';
+                } else if (itemNameLower.includes('lost origin') || item.itemId === 'tcg-12') {
+                    packPath = 'lorigin/sealed_lorigin';
+                } else if (itemNameLower.includes('phantasmal') || item.itemId === 'tcg-27') {
+                    packPath = 'pflames/sealed_pflames';
+                } else if (itemNameLower.includes('roaring skies') || item.itemId === 'tcg-4') {
+                    packPath = 'rskies/sealed_rskies';
+                } else if (itemNameLower.includes('team up') || item.itemId === 'tcg-5') {
+                    packPath = 'teamup/sealed_teamup';
+                } else if (itemNameLower.includes('team rocket') || item.itemId === 'tcg-2') {
+                    packPath = 'trocket/sealed_trocket';
+                } else if (itemNameLower.includes('surging sparks') || item.itemId === 'tcg-20') {
+                    packPath = 'ssparks/sealed_ssparks';
+                } else if (itemNameLower.includes('unified minds') || item.itemId === 'tcg-7') {
+                    packPath = 'uminds/sealed_uminds';
+                } else if (itemNameLower.includes('gym challenge') || item.itemId === 'tcg-3') {
+                    packPath = 'gchallange/sealed_gchallange';
+                } else if (itemNameLower.includes('hidden fates') || item.itemId === 'tcg-8') {
+                    packPath = 'hfates/sealed_hfates';
+                } else if (itemNameLower.includes('paldean fates') || item.itemId === 'tcg-18') {
+                    packPath = 'pfates/sealed_pfates';
+                } else if (itemNameLower.includes('unbroken bounds') || item.itemId === 'tcg-6') {
+                    packPath = 'ubounds/sealed_ubounds';
+                } else if (itemNameLower.includes('paradox rift') || item.itemId === 'tcg-17') {
+                    packPath = 'prift/sealed_prift';
+                } else if (itemNameLower.includes('temporal forces') || item.itemId === 'tcg-19') {
+                    packPath = 'tforces/sealed_tforces';
+                } else if (itemNameLower.includes('journey together') || item.itemId === 'tcg-22') {
+                    packPath = 'jtogether/sealed_jtogether';
+                } else if (itemNameLower.includes('black bolt') || item.itemId === 'tcg-24') {
+                    packPath = 'bbolt/sealed_bbolt';
+                } else if (itemNameLower.includes('white flare') || item.itemId === 'tcg-25') {
+                    packPath = 'wflare/sealed_wflare';
+                } else if (itemNameLower.includes('mega evolution') || item.itemId === 'tcg-26') {
+                    packPath = 'mevolution/sealed_mevolution';
+                } else if (itemNameLower.includes('mew 151') || item.itemId === 'tcg-16' || item.itemId === '40050') {
+                    packPath = 'mew151/sealed_mew151';
+                }
+                command = `give ${player} cobbletcg:${packPath} 1`;
+            } else if (itemNameLower.includes('loot ball') || itemNameLower.includes('lootball')) {
+                let lootBallNbt = 'poke';
+                let variant = 'poke';
+                let texture = 'cobblemon:textures/poke_balls/poke_ball.png';
+
+                if (itemNameLower.includes('uncommon') || item.itemId === '40011') {
+                    lootBallNbt = 'great';
+                    variant = 'great';
+                    texture = 'cobblemon:textures/poke_balls/great_ball.png';
+                } else if (itemNameLower.includes('ultra rare') || itemNameLower.includes('ultra-rare') || item.itemId === '40061') {
+                    lootBallNbt = 'master';
+                    variant = 'master';
+                    texture = 'cobblemon:textures/poke_balls/master_ball.png';
+                } else if (itemNameLower.includes('rare') || item.itemId === '40060') {
+                    lootBallNbt = 'ultra';
+                    variant = 'ultra';
+                    texture = 'cobblemon:textures/poke_balls/ultra_ball.png';
+                }
+
+                command = `give ${player} cobbleloots:loot_ball[minecraft:custom_data={LootBallData:"cobbleloots:loot_ball/${lootBallNbt}",Variant:"${variant}",Texture:"${texture}"}] 1`;
+            } else if (itemNameLower.includes('cobbledollar')) {
+                const dollarsMatch = item.name.match(/\d+/);
+                const amount = dollarsMatch ? dollarsMatch[0] : '50';
+                command = `cobbledollars give ${player} ${amount}`;
+            } else if (itemNameLower.includes('relic coin')) {
+                const relicMatch = item.name.match(/^(\d+)x/);
+                const count = relicMatch ? parseInt(relicMatch[1]) : 1;
+                command = `give ${player} cobblemon:relic_coin ${count}`;
+            } else if (itemNameLower.includes('koban coin')) {
+                const kobanMatch = item.name.match(/^(\d+)x/);
+                const count = kobanMatch ? parseInt(kobanMatch[1]) : 1;
+                command = `give ${player} cobbledgacha:koban_coin ${count}`;
+            } else if (itemNameLower.includes('hat bag')) {
+                let bagId = 'simplehats:hatbag_common';
+                if (itemNameLower.includes('uncommon')) bagId = 'simplehats:hatbag_uncommon';
+                else if (itemNameLower.includes('rare')) bagId = 'simplehats:hatbag_rare';
+                else if (itemNameLower.includes('epic')) bagId = 'simplehats:hatbag_epic';
+                else if (itemNameLower.includes('summer')) bagId = 'simplehats:hatbag_summer';
+                command = `give ${player} ${bagId} 1`;
+            } else {
+                let count = 1;
+                let itemName = item.name;
+
+                const match = item.name.match(/^(\d+)x\s+(.+)$/);
+                if (match) {
+                    count = parseInt(match[1]);
+                    itemName = match[2];
+                }
+
+                let isHat = false;
+                let hatId = null;
+
+                const cleanItemId = item.itemId ? item.itemId.replace(/^hat-/, '').toLowerCase() : '';
+                const cleanName = itemName.toLowerCase().replace(/\s+/g, '').replace(/hat$/, '');
+
+                if (AUTHENTIC_HAT_OVERRIDES[cleanItemId]) {
+                    isHat = true;
+                    hatId = cleanItemId;
+                } else if (AUTHENTIC_HAT_OVERRIDES[itemName.toLowerCase()]) {
+                    isHat = true;
+                    hatId = itemName.toLowerCase();
+                } else if (AUTHENTIC_HAT_OVERRIDES[cleanName]) {
+                    isHat = true;
+                    hatId = cleanName;
+                } else if (AUTHENTIC_HAT_OVERRIDES[cleanName + 'hat']) {
+                    isHat = true;
+                    hatId = cleanName + 'hat';
+                } else {
+                    for (const [key, val] of Object.entries(AUTHENTIC_HAT_OVERRIDES)) {
+                        if (val.name.toLowerCase() === itemName.toLowerCase() || val.name.toLowerCase() === cleanName) {
+                            isHat = true;
+                            hatId = key;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isHat && (item.type?.toLowerCase() === 'hat' || (item.itemId && item.itemId.startsWith('hat-')))) {
+                    isHat = true;
+                    hatId = cleanItemId || cleanName;
+                }
+
+                if (isHat && hatId) {
+                    command = `give ${player} simplehats:${hatId} 1`;
+                } else {
+                    const mappedId = ITEM_MAP[itemName];
+                    if (mappedId) {
+                        command = `give ${player} ${mappedId} ${count}`;
+                    } else {
+                        console.error(`❌ Unknown item mapping: ${itemName}`);
+                        return res.status(500).json({ error: "Item ID map missing. Contact Admin." });
+                    }
+                }
+            }
+
+            console.log(`🚀 Executing Claim: ${command}`);
+            const rconSuccess = await sendRconCommand(command);
+
+            if (rconSuccess) {
+                item.claimed = true;
+                item.claimedAt = new Date();
+                await item.save();
+                claimedCount++;
+            }
+        }
+
+        if (claimedCount > 0) {
+            res.json({ success: true, claimedCount });
+        } else {
+            res.status(502).json({ error: "RCON Failed. Server might be offline." });
+        }
+
     } catch (e) {
+        console.error("Claim Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
