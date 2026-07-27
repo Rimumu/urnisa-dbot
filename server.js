@@ -1155,7 +1155,7 @@ app.get('/api/packs', async (req, res) => {
 
 app.get('/api/inventory', async (req, res) => {
     try {
-        const items = await InventoryItem.find({ discordId: req.query.discordId, claimed: false }).sort({ receivedAt: -1 });
+        const items = await InventoryItem.find({ discordId: req.query.discordId }).sort({ receivedAt: -1 });
         res.json(items);
     } catch (e) {
         res.status(500).json({ error: e.message });
