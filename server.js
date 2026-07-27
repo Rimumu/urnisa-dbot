@@ -1106,22 +1106,31 @@ app.post('/api/inventory/save', async (req, res) => {
 });
 
 app.post('/api/packs/use', async (req, res) => {
-    const { discordId, packType, amount = 1 } = req.body;
+    const { discordId, packType, type, packId, amount = 1 } = req.body;
+    const requestedType = (packType || type || packId || '').toLowerCase();
     try {
         const wallet = await UserKey.findOne({ discordId });
         if (!wallet) return res.status(400).json({ error: "No wallet found." });
 
-        if (packType === 'lamb') {
+        let remaining = 0;
+        if (requestedType === 'lamb') {
             if (wallet.lambKeys < amount) return res.status(400).json({ error: "Not enough Lamb Keys." });
             wallet.lambKeys -= amount;
-        } else if (packType === 'wagyu') {
-            if (wallet.wagyuKeys < amount) return res.status(400).json({ error: "Not enough Wagyu Keys." });
-            wallet.wagyuKeys -= amount;
+            remaining = wallet.lambKeys;
+        } else if (requestedType === 'wagyu' || requestedType === 'steak') {
+            if (wallet.wagyuKeys < amount && wallet.steakKeys < amount) return res.status(400).json({ error: "Not enough Wagyu Keys." });
+            if (wallet.wagyuKeys >= amount) {
+                wallet.wagyuKeys -= amount;
+                remaining = wallet.wagyuKeys;
+            } else {
+                wallet.steakKeys -= amount;
+                remaining = wallet.steakKeys;
+            }
         } else {
             return res.status(400).json({ error: "Invalid pack type." });
         }
         await wallet.save();
-        res.json({ success: true });
+        res.json({ success: true, remaining });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
