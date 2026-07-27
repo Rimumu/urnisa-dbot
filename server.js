@@ -1154,7 +1154,68 @@ app.get('/api/inventory', async (req, res) => {
     }
 });
 
+// Helper to generate the exact RCON command for giving items in Minecraft
+const getItemRconCommand = (username, item) => {
+    const itemName = item.name || '';
+    const itemId = item.itemId || '';
+    const itemType = item.type || 'Item';
+
+    // 1. Pokemon
+    if (itemType === 'Pokemon' || itemType === 'pokemon') {
+        const cleanName = itemName.toLowerCase().replace(/\s+/g, '');
+        return `pokegive ${username} ${cleanName}`;
+    }
+
+    // 2. Mapped items from ITEM_MAP
+    if (ITEM_MAP[itemName]) {
+        const mapped = ITEM_MAP[itemName];
+        if (mapped.startsWith('give ') || mapped.startsWith('pokegive ')) {
+            return mapped.replace('{user}', username);
+        }
+        return `give ${username} ${mapped} 1`;
+    }
+
+    // 3. Hats & Cosmetics
+    if (itemType === 'Hat' || itemType === 'hat' || (typeof ALL_HATS !== 'undefined' && (ALL_HATS[itemId] || ALL_HATS[itemName]))) {
+        const hatId = itemId || itemName;
+        return `give ${username} simplehats:${hatId} 1`;
+    }
+
+    // 4. Items with explicit namespace (cobblemon:, numismatic-overhaul:, minecraft:, simplehats:, etc.)
+    if (itemId.includes(':')) {
+        return `give ${username} ${itemId} 1`;
+    }
+
+    // 5. TCG Booster Packs
+    if (itemId.startsWith('tcg-') || itemType === 'TCG' || itemName.toLowerCase().includes('pack')) {
+        const safeName = itemName.replace(/["'\\]/g, '');
+        return `give ${username} paper[custom_name='{"text":"${safeName}","color":"gold","bold":true}',lore=['{"text":"TCG Booster Pack - Redeem with Rimu!","color":"yellow"}']] 1`;
+    }
+
+    // 6. Generic item fallback
+    const cleanId = (itemId || itemName).toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    return `give ${username} minecraft:${cleanId} 1`;
+};
+
 app.post('/api/inventory/claim', async (req, res) => {
+    const { discordId, itemIds, dbItemId } = req.body;
+    try {
+        const link = await MinecraftLink.findOne({ discordId });
+        if (!link) return res.status(400).json({ error: "No Minecraft account linked." });
+
+        const targetIds = Array.isArray(itemIds) ? itemIds : (dbItemId ? [dbItemId] : []);
+        if (targetIds.length === 0) return res.status(400).json({ error: "No items specified." });
+
+        const items = await InventoryItem.find({ _id: { $in: targetIds }, discordId, claimed: false });
+        if (items.length === 0) return res.status(400).json({ error: "No unclaimed items found." });
+
+        // 1. Check if user is online in Minecraft server via RCON
+        const listRes = await sendRconCommand('list');
+        if (listRes === false) {
+            return res.status(500).json({ error: "Cannot connect to Minecraft server via RCON. Is the server online?" });
+        }
+        if (typeof listRes === 'string' && !listRes.includes("Simulation")) {
+            const escapedUsername = link.minecraftUsername.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\app.post('/api/inventory/claim', async (req, res) => {
     const { discordId, itemIds, dbItemId } = req.body;
     try {
         const link = await MinecraftLink.findOne({ discordId });
@@ -1171,6 +1232,30 @@ app.post('/api/inventory/claim', async (req, res) => {
             let cmd = `/give ${link.minecraftUsername} ${item.itemId} 1`;
             if (item.type === 'Pokemon') cmd = `/pokegive ${link.minecraftUsername} ${item.name}`;
             await sendRconCommand(cmd);
+            item.claimed = true;
+            item.claimedAt = new Date();
+            await item.save();
+        }
+
+        res.json({ success: true, claimedCount: items.length });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});');
+            const onlineRegex = new RegExp(`\\b${escapedUsername}\\b`, 'i');
+            if (!onlineRegex.test(listRes)) {
+                return res.status(400).json({ error: "Claim Failed: You must be online in-game to claim items!" });
+            }
+        }
+
+        // 2. Execute RCON give commands
+        for (const item of items) {
+            const cmd = getItemRconCommand(link.minecraftUsername, item);
+            console.log(`🎁 [CLAIM RCON] Executing for ${link.minecraftUsername}: ${cmd}`);
+            const result = await sendRconCommand(cmd);
+            if (result === false) {
+                return res.status(500).json({ error: `Failed to deliver item ${item.name} via RCON.` });
+            }
             item.claimed = true;
             item.claimedAt = new Date();
             await item.save();
