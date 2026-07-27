@@ -1106,26 +1106,25 @@ app.post('/api/inventory/save', async (req, res) => {
 });
 
 app.post('/api/packs/use', async (req, res) => {
-    const { discordId, packType, type, packId, amount = 1 } = req.body;
-    const requestedType = (packType || type || packId || '').toLowerCase();
+    const { discordId, packType, type, amount = 1 } = req.body;
+    const actualPackType = (packType || type || '').toLowerCase();
     try {
         const wallet = await UserKey.findOne({ discordId });
         if (!wallet) return res.status(400).json({ error: "No wallet found." });
 
         let remaining = 0;
-        if (requestedType === 'lamb') {
+        if (actualPackType === 'lamb') {
             if (wallet.lambKeys < amount) return res.status(400).json({ error: "Not enough Lamb Keys." });
             wallet.lambKeys -= amount;
             remaining = wallet.lambKeys;
-        } else if (requestedType === 'wagyu' || requestedType === 'steak') {
-            if (wallet.wagyuKeys < amount && wallet.steakKeys < amount) return res.status(400).json({ error: "Not enough Wagyu Keys." });
-            if (wallet.wagyuKeys >= amount) {
-                wallet.wagyuKeys -= amount;
-                remaining = wallet.wagyuKeys;
-            } else {
-                wallet.steakKeys -= amount;
-                remaining = wallet.steakKeys;
-            }
+        } else if (actualPackType === 'steak') {
+            if (wallet.steakKeys < amount) return res.status(400).json({ error: "Not enough Steak Keys." });
+            wallet.steakKeys -= amount;
+            remaining = wallet.steakKeys;
+        } else if (actualPackType === 'wagyu') {
+            if (wallet.wagyuKeys < amount) return res.status(400).json({ error: "Not enough Wagyu Keys." });
+            wallet.wagyuKeys -= amount;
+            remaining = wallet.wagyuKeys;
         } else {
             return res.status(400).json({ error: "Invalid pack type." });
         }
@@ -1156,15 +1155,18 @@ app.get('/api/inventory', async (req, res) => {
 });
 
 app.post('/api/inventory/claim', async (req, res) => {
-    const { discordId, itemIds } = req.body;
+    const { discordId, itemIds, dbItemId } = req.body;
     try {
         const link = await MinecraftLink.findOne({ discordId });
         if (!link) return res.status(400).json({ error: "No Minecraft account linked." });
 
-        const items = await InventoryItem.find({ _id: { $in: itemIds }, discordId, claimed: false });
-        if (items.length === 0) return res.status(400).json({ error: "No items to claim." });
+        const targetIds = Array.isArray(itemIds) ? itemIds : (dbItemId ? [dbItemId] : []);
+        if (targetIds.length === 0) return res.status(400).json({ error: "No items specified." });
 
-        // Try to give items (this can be basic since I don't have the full RCON logic, just fallback or pretend success if RCON missing)
+        const items = await InventoryItem.find({ _id: { $in: targetIds }, discordId, claimed: false });
+        if (items.length === 0) return res.status(400).json({ error: "No unclaimed items found." });
+
+        // Try to give items
         for (const item of items) {
             let cmd = `/give ${link.minecraftUsername} ${item.itemId} 1`;
             if (item.type === 'Pokemon') cmd = `/pokegive ${link.minecraftUsername} ${item.name}`;
